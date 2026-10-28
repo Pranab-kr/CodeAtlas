@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
+import { connection } from "next/server";
 
 export async function requireActiveOrganization() {
+  await connection();
   const { orgId, orgRole, sessionClaims } = await auth();
 
   if (!orgId) {
