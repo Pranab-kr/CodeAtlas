@@ -1,9 +1,15 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  classifyRoles,
+  type AiRole,
+  type RoleCandidate,
+} from "@/lib/ai/roles";
+import { env } from "@/lib/env";
 import { parseRepository } from "@/lib/parser/parse";
 import type { ParseResult } from "@/lib/parser/types";
 import { walkRepository } from "@/lib/parser/walk";
@@ -142,6 +148,7 @@ export async function continueRun(
       `Parsing ${count(selection.files.length, "file")}`,
     );
     const result = parseRepository(workdir);
+    const aiRoles = await labelUnidentified(db, claimed, result, workdir);
 
     await enter(
       db,
@@ -156,6 +163,7 @@ export async function continueRun(
       db,
       { id: analysisId, organizationId },
       result,
+      aiRoles,
     );
 
     await update(db, claimed, {
@@ -199,6 +207,85 @@ export async function continueRun(
     if (workdir) {
       await rm(workdir, { recursive: true, force: true });
     }
+  }
+}
+
+/**
+ * Labels only the files convention left alone. The source is still on disk
+ * here, so this needs no GitHub round trip. A failed batch leaves its files
+ * unlabelled; it never fails the map.
+ */
+async function labelUnidentified(
+  db: Db,
+  claimed: ClaimedRun,
+  result: ParseResult,
+  workdir: string,
+): Promise<Map<string, AiRole>> {
+  if (!env.aiConfigured) {
+    return new Map();
+  }
+
+  const unidentified = result.files.filter((file) => file.role === null);
+  if (unidentified.length === 0) {
+    return new Map();
+  }
+
+  await enter(
+    db,
+    claimed,
+    "label",
+    `Labelling ${count(unidentified.length, "file")} that convention could not identify`,
+  );
+
+  const imports = new Map<string, Set<string>>();
+  for (const edge of result.edges) {
+    const targets = imports.get(edge.source) ?? new Set<string>();
+    targets.add(edge.target);
+    imports.set(edge.source, targets);
+  }
+
+  const candidates: RoleCandidate[] = [];
+  for (const file of unidentified) {
+    try {
+      const source = await readFile(path.join(workdir, file.path), "utf8");
+      candidates.push({
+        path: file.path,
+        exports: file.exports,
+        imports: [...(imports.get(file.path) ?? [])],
+        source,
+      });
+    } catch (error) {
+      console.error(
+        `Reading ${file.path} for labelling failed:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  if (candidates.length === 0) {
+    return new Map();
+  }
+
+  try {
+    return await classifyRoles({
+      candidates,
+      onBatch: async (done, total) => {
+        // Each batch is a row update, so a long labelling pass keeps the run
+        // from looking abandoned while the model is still working.
+        await update(db, claimed, {
+          stage_message: `Checked ${done} of ${total} unidentified files`,
+        });
+      },
+    });
+  } catch (error) {
+    if (error instanceof SupersededError) {
+      throw error;
+    }
+    console.error(
+      "Labelling unidentified files failed:",
+      error instanceof Error ? error.message : String(error),
+    );
+    return new Map();
   }
 }
 

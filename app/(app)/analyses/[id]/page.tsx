@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { AnalysisView } from "@/components/workspace/analysis-view";
 import { readCoverage } from "@/lib/analysis/coverage";
 import { loadMap } from "@/lib/analysis/load";
+import { env } from "@/lib/env";
 import {
   isStage,
   isStale,
@@ -134,6 +135,9 @@ async function AnalysisBody({ params }: Parameter) {
         ) : (
           <div className="min-h-0 flex-1">
             <AnalysisView
+              analysisId={analysis.id}
+              aiConfigured={env.aiConfigured}
+              tracingConfigured={env.tracingConfigured}
               repository={{
                 name: project.name,
                 framework: analysis.framework ?? "none",

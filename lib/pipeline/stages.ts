@@ -4,7 +4,7 @@
  */
 
 export type Status = "queued" | "running" | "succeeded" | "failed";
-export type Stage = "fetch" | "select" | "parse" | "store";
+export type Stage = "fetch" | "select" | "parse" | "label" | "store";
 
 export interface Progress {
   status: Status;
@@ -17,6 +17,7 @@ export const STAGES: readonly { stage: Stage; label: string }[] = [
   { stage: "fetch", label: "Fetch archive" },
   { stage: "select", label: "Select files" },
   { stage: "parse", label: "Parse imports" },
+  { stage: "label", label: "Label roles" },
   { stage: "store", label: "Store map" },
 ];
 
@@ -29,7 +30,13 @@ const STATUSES: readonly Status[] = [
   "failed",
 ];
 
-const STAGE_NAMES: readonly Stage[] = ["fetch", "select", "parse", "store"];
+const STAGE_NAMES: readonly Stage[] = [
+  "fetch",
+  "select",
+  "parse",
+  "label",
+  "store",
+];
 
 export function isStatus(value: string): value is Status {
   return STATUSES.some((status) => status === value);
