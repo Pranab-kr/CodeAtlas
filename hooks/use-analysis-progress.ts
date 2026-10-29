@@ -65,11 +65,19 @@ export function useAnalysisProgress(
 
           const read = progressFromRow(data);
           if (read) {
-            // Same content keeps the same object, so "unchanged since render"
-            // stays true for the stale check.
-            setProgress((current) =>
-              sameProgress(current, read) ? current : read,
-            );
+            setProgress((current) => {
+              // The read starts before the channel can deliver a terminal
+              // update. If it resolves after one, it must not reopen the run.
+              if (
+                !isUnfinished(current.status) &&
+                isUnfinished(read.status)
+              ) {
+                return current;
+              }
+              // Same content keeps the same object, so "unchanged since
+              // render" stays true for the stale check.
+              return sameProgress(current, read) ? current : read;
+            });
           }
         } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") {
           // Said out loud: a page that silently stops updating looks stuck.
