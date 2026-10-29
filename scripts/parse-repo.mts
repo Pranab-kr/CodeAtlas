@@ -1,0 +1,176 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+import { parseRepository } from "../lib/parser/index.ts";
+import type { EdgeKind, ParseResult, ParsedFile } from "../lib/parser/types.ts";
+
+function usage(): void {
+  console.log(`Usage: node scripts/parse-repo.mts <directory> [--out <file>]
+
+Parses every TypeScript and JavaScript file under <directory> and prints what
+it found. With --out, also writes the full result as a typed TypeScript module.`);
+}
+
+function main(): number {
+  const args = process.argv.slice(2);
+  let target: string | undefined;
+  let out: string | undefined;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--help" || argument === "-h") {
+      usage();
+      return 0;
+    }
+    if (argument === "--out" || argument === "-o") {
+      out = args[index + 1];
+      index += 1;
+      if (!out) {
+        console.error("Missing value for --out");
+        return 1;
+      }
+      continue;
+    }
+    if (argument.startsWith("--out=")) {
+      out = argument.slice("--out=".length);
+      continue;
+    }
+    if (argument.startsWith("-")) {
+      console.error(`Unknown option: ${argument}`);
+      return 1;
+    }
+    if (target) {
+      console.error(`Unexpected argument: ${argument}`);
+      return 1;
+    }
+    target = argument;
+  }
+
+  if (!target) {
+    usage();
+    return 1;
+  }
+
+  const root = path.resolve(target);
+  const result = parseRepository(root);
+  printSummary(root, result);
+
+  if (out) {
+    const outPath = writeTypedOutput(path.resolve(out), result);
+    console.log(`\nWrote typed output: ${outPath}`);
+  }
+
+  return 0;
+}
+
+function printSummary(root: string, result: ParseResult): void {
+  const found = result.files.length + result.skipped.length;
+  const folders = new Set(result.files.map((file) => file.folder)).size;
+  const { imports, reexports } = result.coverage;
+  const edgesByKind = new Map<EdgeKind, number>();
+  for (const edge of result.edges) {
+    edgesByKind.set(edge.kind, (edgesByKind.get(edge.kind) ?? 0) + 1);
+  }
+
+  console.log(`Repository: ${root}`);
+  console.log(`Framework: ${result.framework}`);
+  console.log(
+    `Files: ${found} found = ${result.files.length} parsed + ${result.skipped.length} skipped`,
+  );
+  for (const skip of result.skipped) {
+    console.log(`  skipped ${skip.path} - ${skip.reason}`);
+  }
+  console.log(`Folders: ${folders}`);
+
+  console.log(
+    `Edges: ${result.edges.length}` +
+      [...edgesByKind.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([kind, count]) => ` (${kind} ${count})`)
+        .join(""),
+  );
+  console.log(
+    `Imports: ${imports.seen} seen = ${imports.resolved} resolved + ${imports.external} external + ${imports.excluded} excluded + ${imports.unresolved} unresolved`,
+  );
+  console.log(
+    `Re-exports: ${reexports.seen} found = ${reexports.resolved} resolved + ${reexports.gaps.length} gaps`,
+  );
+
+  printTopFiles("Fan-in", result.files, (file) => file.fanIn);
+  printTopFiles("Fan-out", result.files, (file) => file.fanOut);
+
+  if (reexports.gaps.length > 0) {
+    console.log(`\nRe-export gaps (${reexports.gaps.length}):`);
+    for (const gap of reexports.gaps) {
+      console.log(
+        `  ${gap.importer}:${gap.line} "${gap.specifier}" - ${gap.outcome}: ${gap.reason}`,
+      );
+    }
+  }
+
+  if (result.coverage.unresolved.length > 0) {
+    console.log(`\nUnresolved imports (${result.coverage.unresolved.length}):`);
+    for (const failure of result.coverage.unresolved) {
+      const tried =
+        failure.tried.length > 0 ? ` (tried: ${failure.tried.join(", ")})` : "";
+      console.log(
+        `  ${failure.importer}:${failure.line} "${failure.specifier}" - ${failure.reason}${tried}`,
+      );
+    }
+  }
+
+  if (result.coverage.excluded.length > 0) {
+    console.log(`\nExcluded imports (${result.coverage.excluded.length}):`);
+    for (const excluded of result.coverage.excluded) {
+      console.log(
+        `  ${excluded.importer}:${excluded.line} "${excluded.specifier}" -> ${excluded.target} - ${excluded.reason}`,
+      );
+    }
+  }
+}
+
+function printTopFiles(
+  label: string,
+  files: ParsedFile[],
+  value: (file: ParsedFile) => number,
+): void {
+  const top = [...files]
+    .sort((left, right) => value(right) - value(left) || left.path.localeCompare(right.path))
+    .filter((file) => value(file) > 0)
+    .slice(0, 5);
+  if (top.length === 0) {
+    return;
+  }
+  console.log(
+    `${label}: ${top.map((file) => `${file.path} ${value(file)}`).join(", ")}`,
+  );
+}
+
+function writeTypedOutput(outPath: string, result: ParseResult): string {
+  const typesPath = path.resolve(import.meta.dirname, "../lib/parser/types.ts");
+  const relativeTypes = path
+    .relative(path.dirname(outPath), typesPath)
+    .split(path.sep)
+    .join("/")
+    .replace(/\.ts$/, "");
+  const specifier = relativeTypes.startsWith(".")
+    ? relativeTypes
+    : `./${relativeTypes}`;
+
+  const contents = `// Generated by scripts/parse-repo.mts. Do not edit.
+import type { ParseResult } from "${specifier}";
+
+export const parseResult: ParseResult = ${JSON.stringify(result, null, 2)};
+`;
+
+  mkdirSync(path.dirname(outPath), { recursive: true });
+  writeFileSync(outPath, contents);
+  return outPath;
+}
+
+try {
+  process.exitCode = main();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}

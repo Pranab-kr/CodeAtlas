@@ -4,7 +4,10 @@ import { env } from "@/lib/env";
 
 // Loading env here means a missing value fails when the proxy module is
 // evaluated at startup, not on the first request that needs it.
-const PUBLIC_PATHS = [env.clerkSignInUrl, env.clerkSignUpUrl];
+// The preview renders a checked-in parse result, so it has to load without a
+// session. It is scaffolding and goes away in phase 7.
+const PREVIEW_PATH = "/preview";
+const PUBLIC_PATHS = [env.clerkSignInUrl, env.clerkSignUpUrl, PREVIEW_PATH];
 const START_PATH = "/start";
 
 function isPublic(pathname: string): boolean {
