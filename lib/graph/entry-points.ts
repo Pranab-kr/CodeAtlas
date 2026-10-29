@@ -10,6 +10,7 @@ const ENTRY_ROLES: ReadonlySet<Role> = new Set<Role>([
   "page-route",
   "api-endpoint",
   "server-action",
+  "router",
   "controller",
   "resolver",
   "gateway",

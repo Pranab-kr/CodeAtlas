@@ -35,6 +35,7 @@ export async function storeResult(
       folder: file.folder,
       lines: file.lines,
       content_hash: file.contentHash,
+      exports: file.exports,
     }));
 
   for (let index = 0; index < files.length; index += FILE_CHUNK) {

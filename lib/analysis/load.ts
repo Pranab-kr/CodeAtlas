@@ -96,6 +96,7 @@ export async function loadMap(
     role: roleRows.get(row.id) ?? null,
     fanIn: fans.get(row.path)?.fanIn ?? 0,
     fanOut: fans.get(row.path)?.fanOut ?? 0,
+    exports: row.exports,
   }));
 
   return { files, edges, routes };
@@ -108,12 +109,13 @@ async function readFiles(db: Db, analysisId: string) {
     folder: string;
     lines: number;
     content_hash: string;
+    exports: string[] | null;
   }[] = [];
 
   for (let from = 0; ; ) {
     const { data, error } = await db
       .from("files")
-      .select("id, path, folder, lines, content_hash")
+      .select("id, path, folder, lines, content_hash, exports")
       .eq("analysis_id", analysisId)
       .order("path")
       .range(from, from + PAGE - 1);

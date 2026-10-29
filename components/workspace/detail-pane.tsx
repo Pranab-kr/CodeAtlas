@@ -828,6 +828,21 @@ function FileStructure({
         <Fact label="Length">
           {file.lines} {file.lines === 1 ? "line" : "lines"}
         </Fact>
+        <Fact label="Exports">
+          {file.exports === null ? (
+            <span className="text-muted-foreground">
+              not recorded; run the analysis again
+            </span>
+          ) : file.exports.length === 0 ? (
+            <span className="text-muted-foreground">
+              nothing named in this file
+            </span>
+          ) : (
+            <span className="font-mono break-all">
+              {file.exports.join(", ")}
+            </span>
+          )}
+        </Fact>
         <Fact label="Depends on">
           <span className="text-outgoing">{imports.length}</span>{" "}
           {imports.length === 1 ? "file" : "files"}

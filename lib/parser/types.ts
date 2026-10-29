@@ -40,6 +40,13 @@ export interface ParsedFile {
   role: Role | null;
   fanIn: number;
   fanOut: number;
+  /**
+   * The names this file exports, ESM and CommonJS alike, as written in it, in
+   * source order. `export * from` adds nothing here: which names it passes on
+   * lives in the other file, which is a re-export edge away. Null only when a
+   * stored analysis predates export reading; the parser itself always fills it.
+   */
+  exports: string[] | null;
 }
 
 export interface ParsedEdge {

@@ -9,6 +9,7 @@ import type {
   FrameworkAdapter,
   ProjectInfo,
 } from "./adapter.ts";
+import { extractExports } from "./exports.ts";
 import { computeFanCounts } from "./graph.ts";
 import { createConfigLoader, resolveModuleReference } from "./resolve.ts";
 import type {
@@ -78,6 +79,7 @@ export function parseRepository(
   const adapterFiles: AdapterFile[] = [];
   const parseFailures: SkippedFile[] = [];
   const roles = new Map<string, Role | null>();
+  const exportNames = new Map<string, string[]>();
   const edgeMap = new Map<string, ParsedEdge>();
   const unresolvedImports: UnresolvedImport[] = [];
   const excludedImports: ExcludedImport[] = [];
@@ -110,6 +112,7 @@ export function parseRepository(
     const adapterFile: AdapterFile = { path: file.path, source: sourceFile };
     adapterFiles.push(adapterFile);
     roles.set(file.path, adapter.roleOf(adapterFile));
+    exportNames.set(file.path, extractExports(sourceFile));
 
     const config = configLoader.forFile(file.absolutePath);
 
@@ -214,6 +217,7 @@ export function parseRepository(
     role: roles.get(file.path) ?? null,
     fanIn: fans.get(file.path)?.fanIn ?? 0,
     fanOut: fans.get(file.path)?.fanOut ?? 0,
+    exports: exportNames.get(file.path) ?? [],
   }));
 
   const skipped = [...discovered.skipped, ...parseFailures].sort((left, right) =>

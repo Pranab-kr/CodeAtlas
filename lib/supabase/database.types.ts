@@ -231,6 +231,7 @@ export type Database = {
         Row: {
           analysis_id: string
           content_hash: string
+          exports: string[] | null
           folder: string
           id: string
           lines: number
@@ -240,6 +241,7 @@ export type Database = {
         Insert: {
           analysis_id: string
           content_hash: string
+          exports?: string[] | null
           folder: string
           id?: string
           lines?: number
@@ -249,6 +251,7 @@ export type Database = {
         Update: {
           analysis_id?: string
           content_hash?: string
+          exports?: string[] | null
           folder?: string
           id?: string
           lines?: number
