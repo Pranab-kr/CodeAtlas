@@ -80,16 +80,7 @@ export function buildView(
 ): MapView {
   const rankedByModule = new Map<string, string[]>();
   for (const group of fold.modules) {
-    rankedByModule.set(
-      group.id,
-      [...group.files]
-        .sort(
-          (left, right) =>
-            right.fanIn - left.fanIn ||
-            left.path.localeCompare(right.path),
-        )
-        .map((file) => file.path),
-    );
+    rankedByModule.set(group.id, rankModulePaths(group.files));
   }
 
   const windows = new Map<
@@ -228,6 +219,21 @@ export function buildView(
     endpointOf,
     neighborsOf,
   };
+}
+
+/**
+ * The order a panel puts its files in: most depended on first. Exported so
+ * anything scrolling a panel to a file finds it where the panel will.
+ */
+export function rankModulePaths(
+  files: readonly { path: string; fanIn: number }[],
+): string[] {
+  return [...files]
+    .sort(
+      (left, right) =>
+        right.fanIn - left.fanIn || left.path.localeCompare(right.path),
+    )
+    .map((file) => file.path);
 }
 
 export function endpointKey(

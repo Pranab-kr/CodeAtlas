@@ -2,6 +2,8 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
+import type { Selection } from "@/lib/graph/selection";
+
 export interface GraphActions {
   openModule(id: string): void;
   closeModule(id: string): void;
@@ -9,6 +11,8 @@ export interface GraphActions {
   /** Move a panel's window by this many rows; the view clamps it. */
   scroll(id: string, offset: number): void;
   clearSelection(): void;
+  /** Report what the pointer is over, so the detail pane can mark it too. */
+  hover(selection: Selection): void;
 }
 
 const GraphActionsContext = createContext<GraphActions | null>(null);

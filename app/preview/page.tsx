@@ -1,10 +1,7 @@
 import { Separator } from "@/components/ui/separator";
-import { CategoryRail } from "@/components/workspace/category-rail";
-import { DependencyMap } from "@/components/workspace/dependency-map";
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { AnalysisView } from "@/components/workspace/analysis-view";
 import { foldModules } from "@/lib/graph/fold";
 import { parseResult } from "@/lib/preview/parse-result";
-import { categoriesFromFiles } from "@/lib/workspace/categories";
 
 // Scaffolding for phase 4. Phase 7 deletes this route and the checked-in parse
 // result it reads.
@@ -15,7 +12,6 @@ const REPOSITORY = {
 } as const;
 
 export default function PreviewPage() {
-  const categories = categoriesFromFiles(parseResult.files);
   const fold = foldModules(parseResult.files, parseResult.edges, {
     rootLabel: REPOSITORY.name,
   });
@@ -40,16 +36,16 @@ export default function PreviewPage() {
         </div>
       </header>
       <main className="min-h-0 flex-1">
-        <WorkspaceShell
-          rail={<CategoryRail categories={categories} />}
-          map={
-            <DependencyMap
-              files={parseResult.files}
-              edges={parseResult.edges}
-              rootLabel={REPOSITORY.name}
-            />
-          }
-          detail={null}
+        <AnalysisView
+          repository={{
+            name: REPOSITORY.name,
+            framework: parseResult.framework,
+            skipped: parseResult.skipped.length,
+            unresolved: parseResult.coverage.imports.unresolved,
+            routes: null,
+          }}
+          files={parseResult.files}
+          edges={parseResult.edges}
         />
       </main>
     </div>

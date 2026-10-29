@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useGraphActions } from "./graph-actions";
+import { useMapHover } from "./graph-hover";
 import type { PanelFlowNode } from "./graph-model";
 
 // Handles are invisible anchors: an edge ends at the row, not at a dot.
@@ -50,7 +51,15 @@ const ROW_STYLE: CSSProperties = {
 };
 
 export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
-  const { closeModule, selectFile, scroll } = useGraphActions();
+  const { closeModule, selectFile, scroll, hover } = useGraphActions();
+  const mapHover = useMapHover();
+  const headerHovered =
+    mapHover.selection?.kind === "node" &&
+    mapHover.selection.id === id;
+  const panelHovered = mapHover.endpoint?.object === id;
+  const isHovered = (handle: string): boolean =>
+    mapHover.endpoint?.object === id &&
+    mapHover.endpoint.handle === handle;
   // Wheel deltas arrive in pixels from trackpads and in lines from some mice;
   // they add up until they make a whole row, so slow scrolling still moves.
   const pending = useRef(0);
@@ -84,7 +93,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
       className={cn(
         "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-[4px] border bg-card",
         data.selected ? "border-selection" : "border-border",
-        data.dimmed && "opacity-25",
+        data.dimmed && !panelHovered && "opacity-25",
       )}
     >
       <button
@@ -93,6 +102,8 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
           event.stopPropagation();
           closeModule(id);
         }}
+        onMouseEnter={() => hover({ kind: "node", id })}
+        onMouseLeave={() => hover(null)}
         title={`${data.directory} — click to fold`}
         style={HEADER_STYLE}
         className={cn(
@@ -100,6 +111,8 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
           data.selected
             ? "bg-selection/[0.06] hover:bg-selection/10"
             : "bg-muted/30 hover:bg-muted/50",
+          headerHovered &&
+            "shadow-[inset_0_0_0_1px_var(--selection)]",
           "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-selection",
         )}
       >
@@ -148,6 +161,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
             count={data.above}
             label="above"
             dimmed={data.aboveDimmed}
+            hovered={isHovered(ABOVE_HANDLE)}
             onClick={() =>
               scroll(id, data.offset - MAX_ROWS)
             }
@@ -173,6 +187,10 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
                 event.stopPropagation();
                 selectFile(row.path);
               }}
+              onMouseEnter={() =>
+                hover({ kind: "file", path: row.path })
+              }
+              onMouseLeave={() => hover(null)}
               aria-pressed={row.selected}
               title={row.path}
               style={ROW_STYLE}
@@ -181,7 +199,9 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
                 row.selected
                   ? "bg-selection/10 text-foreground shadow-[inset_2px_0_0_var(--selection)]"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                row.dimmed && "opacity-25",
+                isHovered(row.path) &&
+                  "shadow-[inset_0_0_0_1px_var(--selection)]",
+                row.dimmed && !isHovered(row.path) && "opacity-25",
                 "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-selection",
               )}
             >
@@ -189,7 +209,10 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
                 aria-hidden
                 className="size-[8px] shrink-0 rounded-[2px]"
                 style={{
-                  backgroundColor: `var(--kind-${row.tone + 1})`,
+                  backgroundColor:
+                    row.tone === null
+                      ? "var(--muted-foreground)"
+                      : `var(--kind-${row.tone + 1})`,
                 }}
               />
               <span className="min-w-0 flex-1 truncate font-mono">
@@ -229,6 +252,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
             count={data.below}
             label="below"
             dimmed={data.belowDimmed}
+            hovered={isHovered(BELOW_HANDLE)}
             onClick={() =>
               scroll(id, data.offset + MAX_ROWS)
             }
@@ -247,12 +271,14 @@ function OffscreenRow({
   count,
   label,
   dimmed,
+  hovered,
   onClick,
 }: {
   handle: string;
   count: number;
   label: string;
   dimmed: boolean;
+  hovered: boolean;
   onClick: () => void;
 }) {
   return (
@@ -278,7 +304,9 @@ function OffscreenRow({
         className={cn(
           "flex size-full items-center text-left font-mono text-[10.5px] tabular-nums",
           "text-muted-foreground enabled:hover:bg-muted/50 enabled:hover:text-foreground disabled:opacity-50",
-          dimmed && "opacity-25",
+          hovered &&
+            "shadow-[inset_0_0_0_1px_var(--selection)]",
+          dimmed && !hovered && "opacity-25",
         )}
       >
         {count} {count === 1 ? "file" : "files"} {label}

@@ -25,7 +25,7 @@ export interface ParseRepositoryOptions {
   adapter?: FrameworkAdapter;
 }
 
-type ReferenceKind = "import" | "reexport" | "dynamic";
+type ReferenceKind = "import" | "reexport" | "dynamic" | "require";
 
 interface ModuleReference {
   specifier: string;
@@ -35,6 +35,7 @@ interface ModuleReference {
 
 interface NonLiteralImport {
   specifier: string;
+  kind: "dynamic" | "require";
   line: number;
   reason: string;
 }
@@ -109,7 +110,7 @@ export function parseRepository(
       unresolvedImports.push({
         importer: file.path,
         specifier: bad.specifier,
-        kind: "dynamic",
+        kind: bad.kind,
         line: bad.line,
         reason: bad.reason,
         tried: [],
@@ -257,16 +258,91 @@ function extractReferences(sourceFile: SourceFile): {
     }
   }
 
-  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-    if (call.getExpression().getKind() !== SyntaxKind.ImportKeyword) {
+  for (const declaration of sourceFile.getDescendantsOfKind(
+    SyntaxKind.ImportEqualsDeclaration,
+  )) {
+    const moduleReference = declaration.getModuleReference();
+    if (!Node.isExternalModuleReference(moduleReference)) {
       continue;
     }
+
+    const expression = moduleReference.getExpression();
+    if (!expression) {
+      nonLiteral.push({
+        specifier: "",
+        kind: "require",
+        line: declaration.getStartLineNumber(),
+        reason: "import equals reference has no module specifier",
+      });
+      continue;
+    }
+
+    if (
+      Node.isStringLiteral(expression) ||
+      Node.isNoSubstitutionTemplateLiteral(expression)
+    ) {
+      references.push({
+        specifier: expression.getLiteralValue(),
+        kind: "require",
+        line: declaration.getStartLineNumber(),
+      });
+      continue;
+    }
+
+    nonLiteral.push({
+      specifier: expression.getText(),
+      kind: "require",
+      line: declaration.getStartLineNumber(),
+      reason: "import equals reference is not a string literal",
+    });
+  }
+
+  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    const expression = call.getExpression();
+    if (expression.getKind() === SyntaxKind.ImportKeyword) {
+      const [argument] = call.getArguments();
+      if (!argument) {
+        nonLiteral.push({
+          specifier: "",
+          kind: "dynamic",
+          line: call.getStartLineNumber(),
+          reason: "dynamic import has no argument",
+        });
+        continue;
+      }
+
+      if (
+        Node.isStringLiteral(argument) ||
+        Node.isNoSubstitutionTemplateLiteral(argument)
+      ) {
+        references.push({
+          specifier: argument.getLiteralValue(),
+          kind: "dynamic",
+          line: call.getStartLineNumber(),
+        });
+        continue;
+      }
+
+      nonLiteral.push({
+        specifier: argument.getText(),
+        kind: "dynamic",
+        line: call.getStartLineNumber(),
+        reason: "dynamic import argument is not a string literal",
+      });
+      continue;
+    }
+
+    if (!Node.isIdentifier(expression) || expression.getText() !== "require") {
+      continue;
+    }
+
     const [argument] = call.getArguments();
     if (!argument) {
       nonLiteral.push({
         specifier: "",
+        kind: "require",
         line: call.getStartLineNumber(),
-        reason: "dynamic import has no argument",
+        reason: "require call has no argument",
       });
       continue;
     }
@@ -277,7 +353,7 @@ function extractReferences(sourceFile: SourceFile): {
     ) {
       references.push({
         specifier: argument.getLiteralValue(),
-        kind: "dynamic",
+        kind: "require",
         line: call.getStartLineNumber(),
       });
       continue;
@@ -285,8 +361,9 @@ function extractReferences(sourceFile: SourceFile): {
 
     nonLiteral.push({
       specifier: argument.getText(),
+      kind: "require",
       line: call.getStartLineNumber(),
-      reason: "dynamic import argument is not a string literal",
+      reason: "require argument is not a string literal",
     });
   }
 
