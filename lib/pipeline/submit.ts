@@ -7,8 +7,8 @@ type Db = SupabaseClient<Database>;
 
 export interface Submission {
   analysisId: string;
-  /** False when this repository already had an analysis. */
-  created: boolean;
+  /** True when the row is waiting for a run, newly created or not. */
+  queued: boolean;
 }
 
 /**
@@ -82,12 +82,12 @@ export async function submitRepository(
   }
 
   if (inserted.data) {
-    return { analysisId: inserted.data.id, created: true };
+    return { analysisId: inserted.data.id, queued: true };
   }
 
   const existing = await db
     .from("analyses")
-    .select("id")
+    .select("id, status")
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -102,5 +102,8 @@ export async function submitRepository(
     );
   }
 
-  return { analysisId: existing.data.id, created: false };
+  return {
+    analysisId: existing.data.id,
+    queued: existing.data.status === "queued",
+  };
 }

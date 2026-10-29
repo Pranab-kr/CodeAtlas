@@ -38,11 +38,17 @@ export function useAnalysisProgress(
     }
 
     let cancelled = false;
+    // A broadcast is newer than a row read that started before it. Both
+    // counters let the read notice that its snapshot has been overtaken.
+    let broadcastVersion = 0;
+    let readGeneration = 0;
+
     const channel = supabase
       .channel(progressTopic(analysisId), { config: { private: true } })
       .on("broadcast", { event: "progress" }, ({ payload }) => {
         const next = parseProgress(payload);
         if (next && !cancelled) {
+          broadcastVersion += 1;
           setProgress(next);
         }
       })
@@ -53,21 +59,28 @@ export function useAnalysisProgress(
 
         if (state === "SUBSCRIBED") {
           setLost(null);
+          const generation = ++readGeneration;
+          const version = broadcastVersion;
           const { data } = await supabase
             .from("analyses")
             .select("status, stage, stage_message, error")
             .eq("id", analysisId)
             .maybeSingle();
 
-          if (!data || cancelled) {
+          if (!data || cancelled || generation !== readGeneration) {
             return;
           }
 
           const read = progressFromRow(data);
           if (read) {
             setProgress((current) => {
-              // The read starts before the channel can deliver a terminal
-              // update. If it resolves after one, it must not reopen the run.
+              // A broadcast that arrived after this read started already
+              // carries newer progress; keep it instead of restoring the
+              // older row snapshot.
+              if (broadcastVersion !== version) {
+                return current;
+              }
+              // A stale read must not reopen a run that already finished.
               if (
                 !isUnfinished(current.status) &&
                 isUnfinished(read.status)

@@ -59,9 +59,11 @@ export async function submitAnalysis(
     const submission = await submitRepository(db, orgId, repository);
     analysisId = submission.analysisId;
 
-    // Submitting an analysed repository takes you to it. Starting another run
-    // is a deliberate act from that analysis, not a side effect of the URL.
-    if (submission.created) {
+    // Submitting an analysed repository takes you to it. A queued row has no
+    // run working on it, so claim it even when this submission found it.
+    // Starting another run over a finished analysis stays a deliberate act
+    // from that analysis, not a side effect of the URL.
+    if (submission.queued) {
       const claimed = await claimAnalysis(db, {
         analysisId,
         organizationId: orgId,
