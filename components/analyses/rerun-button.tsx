@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import { rerunAnalysis, type RunState } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,11 @@ const INITIAL: RunState = { error: null, analysisId: null };
 export function RerunButton({
   analysisId,
   onStart,
+  onError,
 }: {
   analysisId: string;
   onStart?: () => void;
+  onError?: () => void;
 }) {
   const [state, action, pending] = useActionState(rerunAnalysis, INITIAL);
 
@@ -27,6 +29,19 @@ export function RerunButton({
       window.location.assign(`/analyses/${state.analysisId}`);
     }
   }, [state.analysisId]);
+
+  // A refused rerun must not leave live progress switched off. The action
+  // returns a fresh state object for every result, including an identical
+  // error, so comparing identity catches a repeat attempt too.
+  const lastState = useRef(state);
+  useEffect(() => {
+    if (state !== lastState.current) {
+      lastState.current = state;
+      if (state.error) {
+        onError?.();
+      }
+    }
+  }, [state, onError]);
 
   return (
     <form

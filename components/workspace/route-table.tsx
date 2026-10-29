@@ -87,7 +87,20 @@ export function RouteTable({
                     className="px-3 text-muted-foreground"
                     title={route.path}
                   >
-                    {route.path}:{route.line}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onReveal(route.path);
+                      }}
+                      onFocus={() =>
+                        onHover({ kind: "file", path: route.path })
+                      }
+                      onBlur={() => onHover(null)}
+                      className="text-left break-all hover:text-foreground focus-visible:text-foreground focus-visible:underline"
+                    >
+                      {route.path}:{route.line}
+                    </button>
                   </td>
                 </tr>
               );

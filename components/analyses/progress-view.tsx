@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAnalysisProgress } from "@/hooks/use-analysis-progress";
 import {
@@ -74,6 +74,7 @@ export function ProgressView({
   staleAtRender: boolean;
 }) {
   const [restarting, setRestarting] = useState(false);
+  const rerunFailed = useCallback(() => setRestarting(false), []);
   const { progress, lost } = useAnalysisProgress(
     analysisId,
     initial,
@@ -155,6 +156,7 @@ export function ProgressView({
             <RerunButton
               analysisId={analysisId}
               onStart={() => setRestarting(true)}
+              onError={rerunFailed}
             />
           </div>
         </div>
@@ -170,6 +172,7 @@ export function ProgressView({
             <RerunButton
               analysisId={analysisId}
               onStart={() => setRestarting(true)}
+              onError={rerunFailed}
             />
           </div>
         </div>

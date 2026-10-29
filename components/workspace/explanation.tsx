@@ -114,9 +114,11 @@ export function ExplanationPanel({
           )}
         >
           {busy
-            ? "Writing…"
+            ? state.body
+              ? "Reloading…"
+              : "Writing…"
             : state.body
-              ? "Explain again"
+              ? "Reload"
               : "Explain"}
         </button>
         {state.cached ? (

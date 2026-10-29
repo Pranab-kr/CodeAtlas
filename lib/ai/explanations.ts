@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { traceable } from "langsmith/traceable";
 
 import { env } from "@/lib/env";
+import { createPipelineSupabaseClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { Repository } from "@/lib/pipeline/github";
 
@@ -266,12 +267,15 @@ async function readFolderCache(
   return data?.body ?? null;
 }
 
+// Cache writes use the pipeline's secret key. A member can read the cache
+// through the policy, but must not be able to plant an answer in it.
 async function writeFileCache(
   request: ExplainFileRequest,
   model: string,
   body: string,
 ): Promise<string | null> {
-  const { error } = await request.db.from("explanations").insert({
+  const writer = createPipelineSupabaseClient();
+  const { error } = await writer.from("explanations").insert({
     organization_id: request.organizationId,
     analysis_id: request.analysisId,
     target_kind: "file",
@@ -291,7 +295,8 @@ async function writeFolderCache(
   model: string,
   body: string,
 ): Promise<string | null> {
-  const { error } = await request.db.from("explanations").insert({
+  const writer = createPipelineSupabaseClient();
+  const { error } = await writer.from("explanations").insert({
     organization_id: request.organizationId,
     analysis_id: request.analysisId,
     target_kind: "folder",
