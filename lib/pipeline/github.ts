@@ -22,6 +22,9 @@ const ARCHIVE_TIMEOUT_MS = 5 * 60_000;
 /** Past this the archive isn't downloaded at all. */
 export const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024;
 
+/** The compressed cap doesn't bound what tar writes to disk. */
+export const MAX_EXTRACTED_BYTES = 1024 * 1024 * 1024;
+
 /**
  * Accepts what people paste: owner/name, github.com/owner/name, a full URL, a
  * URL with /tree/... on the end. Anything that isn't a GitHub repository is
@@ -184,13 +187,31 @@ export async function downloadArchive(
     },
   });
 
+  // A small compressed archive can expand into an arbitrarily large tree.
+  // The filter sees each entry's uncompressed size before it is written.
+  let extracted = 0;
+  const limitEntries = (
+    _entryPath: string,
+    entry: { size: number },
+  ): boolean => {
+    extracted += entry.size;
+    if (extracted > MAX_EXTRACTED_BYTES) {
+      throw tooLargeExtracted(repository);
+    }
+    return true;
+  };
+
   await withTimeout(what, ARCHIVE_TIMEOUT_MS, () =>
     pipeline(
       Readable.from(chunks(body)),
       limit,
-      extract({ cwd: directory, strip: 1 }),
+      extract({ cwd: directory, strip: 1, filter: limitEntries }),
     ),
   );
+
+  if (extracted > MAX_EXTRACTED_BYTES) {
+    throw tooLargeExtracted(repository);
+  }
 
   return received;
 }
@@ -199,6 +220,14 @@ function tooLarge(repository: Repository): PipelineError {
   return new PipelineError(
     `${repository.label}'s archive is larger than ${
       MAX_ARCHIVE_BYTES / (1024 * 1024)
+    } MB, so it wasn't analysed`,
+  );
+}
+
+function tooLargeExtracted(repository: Repository): PipelineError {
+  return new PipelineError(
+    `${repository.label}'s archive expands to more than ${
+      MAX_EXTRACTED_BYTES / (1024 * 1024)
     } MB, so it wasn't analysed`,
   );
 }

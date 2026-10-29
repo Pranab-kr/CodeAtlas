@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ParseResult } from "@/lib/parser/types";
+import type { Role } from "@/lib/roles";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 type Db = SupabaseClient<Database>;
@@ -15,6 +16,7 @@ export async function storeResult(
   db: Db,
   analysis: { id: string; organizationId: string },
   result: ParseResult,
+  aiRoles: ReadonlyMap<string, Role> = new Map(),
 ): Promise<void> {
   // A re-run replaces what the last run stored; edges go with their files.
   const cleared = await db
@@ -49,10 +51,19 @@ export async function storeResult(
 
   // Roles arrive keyed by path, like routes: the database joins them to the
   // files this run just stored and refuses the whole chunk if one misses.
+  // The source says whether convention or the model assigned it.
   const roles: Json[] = [];
+  const adapterPaths = new Set<string>();
   for (const file of result.files) {
     if (file.role !== null) {
-      roles.push({ path: file.path, role: file.role });
+      roles.push({ path: file.path, role: file.role, source: "adapter" });
+      adapterPaths.add(file.path);
+    }
+  }
+  const paths = new Set(result.files.map((file) => file.path));
+  for (const [path, role] of aiRoles) {
+    if (!adapterPaths.has(path) && paths.has(path)) {
+      roles.push({ path, role, source: "ai" });
     }
   }
 

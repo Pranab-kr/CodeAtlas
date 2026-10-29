@@ -2,6 +2,11 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import {
+  explainAction,
+  stalenessAction,
+} from "@/app/(app)/analyses/[id]/explain-actions";
+import type { ExplainTargetInput } from "@/lib/ai/types";
 import { foldModules } from "@/lib/graph/fold";
 import type { Direction } from "@/lib/graph/reach";
 import type { Selection } from "@/lib/graph/selection";
@@ -28,6 +33,11 @@ import {
   type DetailTab,
   type RepositoryFacts,
 } from "./detail-pane";
+import {
+  IDLE_EXPLANATION,
+  type ExplanationState,
+  type ExplanationTarget,
+} from "./explanation";
 import { RouteTable } from "./route-table";
 import { WorkspaceShell } from "./workspace-shell";
 
@@ -35,10 +45,13 @@ import { WorkspaceShell } from "./workspace-shell";
  * Owns what the map and the pane share: which folders are open, how far each
  * is scrolled, what's selected, what's hovered, which tab the pane has open,
  * and whether the centre column shows the map or the route table. Everything
- * either side shows comes from parse output already in the browser, so nothing
- * here makes a request.
+ * either side shows comes from parse output already in the browser, except an
+ * explanation, which is requested only when someone clicks Explain.
  */
 export function AnalysisView({
+  analysisId,
+  aiConfigured,
+  tracingConfigured,
   repository,
   coverage,
   files,
@@ -46,6 +59,9 @@ export function AnalysisView({
   routes,
   routeCoverage,
 }: {
+  analysisId: string;
+  aiConfigured: boolean;
+  tracingConfigured: boolean;
   repository: RepositoryFacts;
   coverage: Coverage | null;
   files: readonly ParsedFile[];
@@ -91,6 +107,11 @@ export function AnalysisView({
   const [types, setTypes] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  // Keyed by file path or folded folder id. Moving selection away and back
+  // finds the body without a second request.
+  const [explanations, setExplanations] = useState<
+    ReadonlyMap<string, ExplanationState>
+  >(() => new Map());
 
   // A folded node's only click opens it, so opening also selects the folder
   // the pane should describe.
@@ -209,6 +230,78 @@ export function AnalysisView({
 
   const deselect = useCallback(() => setSelection(null), []);
 
+  const updateExplanation = useCallback(
+    (key: string, change: Partial<ExplanationState>) => {
+      setExplanations((previous) => {
+        const next = new Map(previous);
+        next.set(key, {
+          ...(previous.get(key) ?? IDLE_EXPLANATION),
+          ...change,
+        });
+        return next;
+      });
+    },
+    [],
+  );
+
+  const explain = useCallback(
+    async (target: ExplanationTarget) => {
+      updateExplanation(target.key, { status: "loading", error: null });
+
+      try {
+        const result = await explainAction({
+          analysisId,
+          target: targetInput(target),
+        });
+
+        if (result.ok) {
+          updateExplanation(target.key, {
+            status: "ready",
+            body: result.body,
+            cached: result.cached,
+            error: null,
+            warning: result.warning,
+          });
+        } else {
+          updateExplanation(target.key, {
+            status: "error",
+            error: result.error,
+          });
+        }
+      } catch (error) {
+        updateExplanation(target.key, {
+          status: "error",
+          error: messageOf(error),
+        });
+      }
+    },
+    [analysisId, updateExplanation],
+  );
+
+  const checkStale = useCallback(
+    async (target: ExplanationTarget) => {
+      if (!aiConfigured) {
+        return;
+      }
+
+      updateExplanation(target.key, { staleStatus: "loading" });
+
+      try {
+        const stale = await stalenessAction({
+          analysisId,
+          target: targetInput(target),
+        });
+        updateExplanation(target.key, { stale, staleStatus: "ready" });
+      } catch (error) {
+        updateExplanation(target.key, {
+          stale: { kind: "unknown", message: messageOf(error) },
+          staleStatus: "ready",
+        });
+      }
+    },
+    [analysisId, aiConfigured, updateExplanation],
+  );
+
   return (
     <WorkspaceShell
       rail={
@@ -296,7 +389,14 @@ export function AnalysisView({
           insightsOpen={insightsOpen}
           onInsightsOpen={setInsightsOpen}
           onReveal={reveal}
+          onRevealFolder={openModule}
           onHover={setHover}
+          analysisId={analysisId}
+          aiConfigured={aiConfigured}
+          tracingConfigured={tracingConfigured}
+          explanations={explanations}
+          onExplain={explain}
+          onCheckStale={checkStale}
         />
       }
     />
@@ -335,4 +435,14 @@ function CentreTab({
       ) : null}
     </button>
   );
+}
+
+function targetInput(target: ExplanationTarget): ExplainTargetInput {
+  return target.kind === "file"
+    ? { kind: "file", path: target.path }
+    : { kind: "folder", id: target.id };
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

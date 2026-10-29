@@ -142,6 +142,14 @@ function nestRoutes({ files, unparsed }: RouteSources): RouteReport {
         : undefined;
     };
 
+    // A route key is per file, method and pattern. Two declarations in one
+    // file would make the stored route insert refuse the whole chunk.
+    const seenRoutes = new Set(
+      report.routes
+        .filter((route) => route.path === path)
+        .map((route) => `${route.method}\u0000${route.pattern}`),
+    );
+
     for (const cls of source.getClasses()) {
       const controller = cls
         .getDecorators()
@@ -210,10 +218,16 @@ function nestRoutes({ files, unparsed }: RouteSources): RouteReport {
           }
           for (const base of bases.paths) {
             for (const tail of own) {
+              const pattern = joinPath([prefix, base, tail]);
+              const key = `${verb}\u0000${pattern}`;
+              if (seenRoutes.has(key)) {
+                continue;
+              }
+              seenRoutes.add(key);
               report.routes.push({
                 path,
                 method: verb,
-                pattern: joinPath([prefix, base, tail]),
+                pattern,
                 line,
               });
             }

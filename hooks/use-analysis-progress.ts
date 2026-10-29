@@ -38,11 +38,17 @@ export function useAnalysisProgress(
     }
 
     let cancelled = false;
+    // A broadcast is newer than a row read that started before it. Both
+    // counters let the read notice that its snapshot has been overtaken.
+    let broadcastVersion = 0;
+    let readGeneration = 0;
+
     const channel = supabase
       .channel(progressTopic(analysisId), { config: { private: true } })
       .on("broadcast", { event: "progress" }, ({ payload }) => {
         const next = parseProgress(payload);
         if (next && !cancelled) {
+          broadcastVersion += 1;
           setProgress(next);
         }
       })
@@ -53,23 +59,38 @@ export function useAnalysisProgress(
 
         if (state === "SUBSCRIBED") {
           setLost(null);
+          const generation = ++readGeneration;
+          const version = broadcastVersion;
           const { data } = await supabase
             .from("analyses")
             .select("status, stage, stage_message, error")
             .eq("id", analysisId)
             .maybeSingle();
 
-          if (!data || cancelled) {
+          if (!data || cancelled || generation !== readGeneration) {
             return;
           }
 
           const read = progressFromRow(data);
           if (read) {
-            // Same content keeps the same object, so "unchanged since render"
-            // stays true for the stale check.
-            setProgress((current) =>
-              sameProgress(current, read) ? current : read,
-            );
+            setProgress((current) => {
+              // A broadcast that arrived after this read started already
+              // carries newer progress; keep it instead of restoring the
+              // older row snapshot.
+              if (broadcastVersion !== version) {
+                return current;
+              }
+              // A stale read must not reopen a run that already finished.
+              if (
+                !isUnfinished(current.status) &&
+                isUnfinished(read.status)
+              ) {
+                return current;
+              }
+              // Same content keeps the same object, so "unchanged since
+              // render" stays true for the stale check.
+              return sameProgress(current, read) ? current : read;
+            });
           }
         } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") {
           // Said out loud: a page that silently stops updating looks stuck.

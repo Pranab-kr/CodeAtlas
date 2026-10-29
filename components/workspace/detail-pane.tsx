@@ -38,6 +38,12 @@ import {
   matchesType,
 } from "@/lib/workspace/kinds";
 
+import {
+  ExplanationPanel,
+  IDLE_EXPLANATION,
+  type ExplanationState,
+  type ExplanationTarget,
+} from "./explanation";
 import { FileTypeFilter } from "./file-type-filter";
 
 export type DetailTab = "structure" | "explanation";
@@ -72,7 +78,14 @@ interface DetailPaneProps {
   insightsOpen: boolean;
   onInsightsOpen(open: boolean): void;
   onReveal(path: string): void;
+  onRevealFolder(id: string): void;
   onHover(selection: Selection): void;
+  analysisId: string;
+  aiConfigured: boolean;
+  tracingConfigured: boolean;
+  explanations: ReadonlyMap<string, ExplanationState>;
+  onExplain(target: ExplanationTarget): void;
+  onCheckStale(target: ExplanationTarget): void;
 }
 
 interface PathActions {
@@ -98,11 +111,28 @@ export function DetailPane({
   insightsOpen,
   onInsightsOpen,
   onReveal,
+  onRevealFolder,
   onHover,
+  analysisId,
+  aiConfigured,
+  tracingConfigured,
+  explanations,
+  onExplain,
+  onCheckStale,
 }: DetailPaneProps) {
   const byPath = useMemo(
     () => new Map(files.map((file) => [file.path, file])),
     [files],
+  );
+  const filePaths = useMemo(
+    () => new Set(files.map((file) => file.path)),
+    [files],
+  );
+  // The model sees folded module ids (the directory), so a folder mentioned
+  // in prose can be the same node the map draws.
+  const folderIds = useMemo(
+    () => new Map(fold.modules.map((entry) => [entry.directory, entry.id])),
+    [fold],
   );
   // One adjacency for whichever file is selected; the walk itself is
   // arithmetic over edges the browser already has.
@@ -194,44 +224,82 @@ export function DetailPane({
     );
   } else if (selection.kind === "file") {
     const file = byPath.get(selection.path);
-    content = file ? (
-      <Selected
-        caption="file"
-        title={<PathTitle path={file.path} paths={paths} />}
-        target="file"
-        tab={tab}
-        onTab={onTab}
-      >
-        <FileStructure
-          file={file}
-          edges={edges}
-          graph={graph}
-          types={types}
-          walk={walk}
-          onWalk={onWalk}
-          paths={paths}
-        />
-      </Selected>
-    ) : null;
+    const target: ExplanationTarget | null = file
+      ? {
+          kind: "file",
+          key: `file:${file.path}`,
+          path: file.path,
+        }
+      : null;
+    content =
+      file && target ? (
+        <Selected
+          caption="file"
+          title={<PathTitle path={file.path} paths={paths} />}
+          explainTarget={target}
+          explanation={explanations.get(target.key) ?? IDLE_EXPLANATION}
+          analysisId={analysisId}
+          aiConfigured={aiConfigured}
+          tracingConfigured={tracingConfigured}
+          filePaths={filePaths}
+          folderIds={folderIds}
+          onExplain={onExplain}
+          onCheckStale={onCheckStale}
+          onReveal={onReveal}
+          onRevealFolder={onRevealFolder}
+          onHover={onHover}
+          tab={tab}
+          onTab={onTab}
+        >
+          <FileStructure
+            file={file}
+            edges={edges}
+            graph={graph}
+            types={types}
+            walk={walk}
+            onWalk={onWalk}
+            paths={paths}
+          />
+        </Selected>
+      ) : null;
   } else {
     const group = fold.modules.find(
       (entry) => entry.id === selection.id,
     );
-    content = group ? (
-      <Selected
-        caption="folder"
-        title={
-          <span className="font-mono text-[12px] break-all">
-            {folderLabel(group.directory)}
-          </span>
+    const target: ExplanationTarget | null = group
+      ? {
+          kind: "folder",
+          key: `folder:${group.id}`,
+          id: group.id,
         }
-        target="folder"
-        tab={tab}
-        onTab={onTab}
-      >
-        <FolderStructure group={group} types={types} />
-      </Selected>
-    ) : null;
+      : null;
+    content =
+      group && target ? (
+        <Selected
+          caption="folder"
+          title={
+            <span className="font-mono text-[12px] break-all">
+              {folderLabel(group.directory)}
+            </span>
+          }
+          explainTarget={target}
+          explanation={explanations.get(target.key) ?? IDLE_EXPLANATION}
+          analysisId={analysisId}
+          aiConfigured={aiConfigured}
+          tracingConfigured={tracingConfigured}
+          filePaths={filePaths}
+          folderIds={folderIds}
+          onExplain={onExplain}
+          onCheckStale={onCheckStale}
+          onReveal={onReveal}
+          onRevealFolder={onRevealFolder}
+          onHover={onHover}
+          tab={tab}
+          onTab={onTab}
+        >
+          <FolderStructure group={group} types={types} />
+        </Selected>
+      ) : null;
   }
 
   return (
@@ -667,14 +735,36 @@ function RankedList({
 function Selected({
   caption,
   title,
-  target,
+  explainTarget,
+  explanation,
+  analysisId,
+  aiConfigured,
+  tracingConfigured,
+  filePaths,
+  folderIds,
+  onExplain,
+  onCheckStale,
+  onReveal,
+  onRevealFolder,
+  onHover,
   tab,
   onTab,
   children,
 }: {
   caption: string;
   title: ReactNode;
-  target: "file" | "folder";
+  explainTarget: ExplanationTarget;
+  explanation: ExplanationState;
+  analysisId: string;
+  aiConfigured: boolean;
+  tracingConfigured: boolean;
+  filePaths: ReadonlySet<string>;
+  folderIds: ReadonlyMap<string, string>;
+  onExplain(target: ExplanationTarget): void;
+  onCheckStale(target: ExplanationTarget): void;
+  onReveal(path: string): void;
+  onRevealFolder(id: string): void;
+  onHover(selection: Selection): void;
   tab: DetailTab;
   onTab(tab: DetailTab): void;
   children: ReactNode;
@@ -702,7 +792,20 @@ function Selected({
       {tab === "structure" ? (
         children
       ) : (
-        <ExplanationEmptyState target={target} />
+        <ExplanationPanel
+          analysisId={analysisId}
+          target={explainTarget}
+          state={explanation}
+          aiConfigured={aiConfigured}
+          tracingConfigured={tracingConfigured}
+          filePaths={filePaths}
+          folderIds={folderIds}
+          onExplain={onExplain}
+          onCheckStale={onCheckStale}
+          onReveal={onReveal}
+          onRevealFolder={onRevealFolder}
+          onHover={onHover}
+        />
       )}
     </div>
   );
@@ -735,22 +838,6 @@ function TabButton({
     >
       {label}
     </button>
-  );
-}
-
-function ExplanationEmptyState({
-  target,
-}: {
-  target: "file" | "folder";
-}) {
-  return (
-    <div className="px-3 py-3 text-[11px]">
-      <p>No explanation yet.</p>
-      <p className="mt-1.5 text-muted-foreground">
-        A paragraph written from this {target} and its real neighbours
-        will appear here once explanations exist.
-      </p>
-    </div>
   );
 }
 
