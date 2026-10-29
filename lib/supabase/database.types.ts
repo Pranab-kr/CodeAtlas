@@ -17,6 +17,7 @@ export type Database = {
       analyses: {
         Row: {
           commit_sha: string | null
+          coverage: Json | null
           created_at: string
           error: string | null
           finished_at: string | null
@@ -32,6 +33,7 @@ export type Database = {
         }
         Insert: {
           commit_sha?: string | null
+          coverage?: Json | null
           created_at?: string
           error?: string | null
           finished_at?: string | null
@@ -47,6 +49,7 @@ export type Database = {
         }
         Update: {
           commit_sha?: string | null
+          coverage?: Json | null
           created_at?: string
           error?: string | null
           finished_at?: string | null
@@ -75,24 +78,30 @@ export type Database = {
           analysis_id: string
           id: string
           kind: string
+          line: number
           organization_id: string
           source_file_id: string
+          specifier: string
           target_file_id: string
         }
         Insert: {
           analysis_id: string
           id?: string
           kind: string
+          line: number
           organization_id: string
           source_file_id: string
+          specifier: string
           target_file_id: string
         }
         Update: {
           analysis_id?: string
           id?: string
           kind?: string
+          line?: number
           organization_id?: string
           source_file_id?: string
+          specifier?: string
           target_file_id?: string
         }
         Relationships: [
@@ -362,7 +371,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      insert_edges: {
+        Args: { p_analysis_id: string; p_edges: Json }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

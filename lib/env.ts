@@ -13,4 +13,6 @@ export const env = {
   clerkSignUpUrl: required("NEXT_PUBLIC_CLERK_SIGN_UP_URL"),
   supabaseUrl: required("NEXT_PUBLIC_SUPABASE_URL"),
   supabasePublishableKey: required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
+  // The pipeline's writer. No NEXT_PUBLIC_ prefix, so it can't be bundled.
+  supabaseSecretKey: required("SUPABASE_API_KEY"),
 };

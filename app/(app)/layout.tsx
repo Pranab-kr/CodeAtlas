@@ -1,5 +1,4 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
-import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Separator } from "@/components/ui/separator";
@@ -19,11 +18,13 @@ async function OrganizationBadge() {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
-        <Link href="/" className="text-[13px] font-medium tracking-tight">
+        {/* Full navigation: the dashboard can hold live analysis channels. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/" className="text-[13px] font-medium tracking-tight">
           CodeAtlas
-        </Link>
+        </a>
         <Separator orientation="vertical" className="h-4" />
         <Suspense fallback={<span className="h-3 w-40" />}>
           <OrganizationBadge />

@@ -11,9 +11,11 @@ import {
   rankModulePaths,
 } from "@/lib/graph/view";
 import type { ParsedEdge, ParsedFile } from "@/lib/parser/types";
+import type { Coverage } from "@/lib/analysis/coverage";
 import { categoriesFromFiles } from "@/lib/workspace/categories";
 
 import { CategoryRail } from "./category-rail";
+import { CoverageBanner } from "./coverage-banner";
 import { DependencyMap } from "./dependency-map";
 import {
   DetailPane,
@@ -30,10 +32,12 @@ import { WorkspaceShell } from "./workspace-shell";
  */
 export function AnalysisView({
   repository,
+  coverage,
   files,
   edges,
 }: {
   repository: RepositoryFacts;
+  coverage: Coverage | null;
   files: readonly ParsedFile[];
   edges: readonly ParsedEdge[];
 }) {
@@ -192,21 +196,26 @@ export function AnalysisView({
         />
       }
       map={
-        <DependencyMap
-          edges={edges}
-          fold={fold}
-          open={open}
-          selection={selection}
-          hover={hover}
-          category={category}
-          refit={refit}
-          onOpen={openModule}
-          onClose={closeModule}
-          onSelectFile={selectFile}
-          onScroll={scroll}
-          onHover={setHover}
-          onDeselect={deselect}
-        />
+        <div className="flex h-full min-h-0 flex-col">
+          {coverage ? <CoverageBanner coverage={coverage} /> : null}
+          <div className="min-h-0 flex-1">
+            <DependencyMap
+              edges={edges}
+              fold={fold}
+              open={open}
+              selection={selection}
+              hover={hover}
+              category={category}
+              refit={refit}
+              onOpen={openModule}
+              onClose={closeModule}
+              onSelectFile={selectFile}
+              onScroll={scroll}
+              onHover={setHover}
+              onDeselect={deselect}
+            />
+          </div>
+        </div>
       }
       detail={
         <DetailPane

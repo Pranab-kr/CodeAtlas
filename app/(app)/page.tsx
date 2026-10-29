@@ -1,79 +1,29 @@
 import { Suspense } from "react";
+
+import { AnalysisRow } from "@/components/analyses/analysis-row";
+import { SubmitForm } from "@/components/analyses/submit-form";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  isStage,
+  isStale,
+  isStatus,
+  type Progress,
+} from "@/lib/pipeline/stages";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-type AnalysisStatus = "queued" | "running" | "succeeded" | "failed";
-
-const STATUS_LABELS: Record<AnalysisStatus, string> = {
-  queued: "queued",
-  running: "running",
-  succeeded: "succeeded",
-  failed: "failed",
-};
-
-const STATUS_STYLES: Record<AnalysisStatus, { dot: string; text: string }> = {
-  queued: { dot: "bg-border", text: "text-muted-foreground" },
-  running: { dot: "bg-foreground", text: "text-foreground" },
-  succeeded: { dot: "bg-foreground/40", text: "text-muted-foreground" },
-  failed: { dot: "bg-destructive", text: "text-destructive" },
-};
-
-function isAnalysisStatus(value: string): value is AnalysisStatus {
-  return (
-    value === "queued" ||
-    value === "running" ||
-    value === "succeeded" ||
-    value === "failed"
-  );
-}
-
-const updatedAtFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-  timeZone: "UTC",
-});
-
-function formatUpdatedAt(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : `${updatedAtFormatter.format(date)} UTC`;
-}
-
-function Status({ status }: { status: string }) {
-  const known = isAnalysisStatus(status);
-  const style = known
-    ? STATUS_STYLES[status]
-    : { dot: "bg-muted-foreground/50", text: "text-muted-foreground" };
-
-  return (
-    <Badge
-      variant="outline"
-      className={`h-4 gap-1.5 px-1.5 font-mono text-[10.5px] font-normal ${style.text}`}
-    >
-      <span aria-hidden className={`size-1.5 rounded-full ${style.dot}`} />
-      {known ? STATUS_LABELS[status] : status}
-    </Badge>
-  );
-}
+import { formatUpdatedAt, now } from "@/lib/time";
 
 function AnalysesLoading() {
   return (
@@ -97,8 +47,8 @@ function AnalysesEmpty() {
       <CardContent className="px-3 py-10">
         <p className="text-[12px]">No analyses in this workspace yet.</p>
         <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
-          The first repository mapped by this team will appear here with its
-          state.
+          Paste a public repository above to map it. Everyone in this
+          workspace will see the result.
         </p>
       </CardContent>
     </Card>
@@ -123,7 +73,9 @@ async function AnalysesList() {
   // exist for this token.
   const { data: analyses, error } = await supabase
     .from("analyses")
-    .select("id, project_id, status, stage_message, error, updated_at")
+    .select(
+      "id, project_id, status, stage, stage_message, error, started_at, created_at, updated_at",
+    )
     .order("updated_at", { ascending: false })
     .limit(50);
 
@@ -150,6 +102,7 @@ async function AnalysesList() {
   const projectsById = new Map(
     projects.map((project) => [project.id, project]),
   );
+  const currentTime = now();
 
   return (
     <Card className="mt-4 gap-0 py-0">
@@ -170,51 +123,50 @@ async function AnalysesList() {
         <TableBody>
           {analyses.map((analysis) => {
             const project = projectsById.get(analysis.project_id);
-            const detail =
-              analysis.status === "failed"
-                ? (analysis.error ?? analysis.stage_message)
-                : analysis.stage_message;
+            const initial = progressOf(analysis);
+            const key = [
+              analysis.id,
+              analysis.status,
+              analysis.stage ?? "",
+              initial.message ?? "",
+              analysis.started_at ?? "",
+            ].join(":");
 
             return (
-              <TableRow key={analysis.id}>
-                <TableCell className="px-3 py-2 align-top">
-                  <p
-                    className="truncate font-mono text-[12px]"
-                    title={project?.repository_url}
-                  >
-                    {project?.name ?? "unknown repository"}
-                  </p>
-                  {detail ? (
-                    <p
-                      className={`mt-0.5 truncate text-[10.5px] ${
-                        analysis.status === "failed"
-                          ? "text-destructive"
-                          : "text-muted-foreground"
-                      }`}
-                      title={detail}
-                    >
-                      {detail}
-                    </p>
-                  ) : null}
-                </TableCell>
-                <TableCell className="px-3 py-2">
-                  <Status status={analysis.status} />
-                </TableCell>
-                <TableCell className="hidden px-3 py-2 sm:table-cell">
-                  <time
-                    dateTime={analysis.updated_at}
-                    className="font-mono text-[10.5px] text-muted-foreground"
-                  >
-                    {formatUpdatedAt(analysis.updated_at)}
-                  </time>
-                </TableCell>
-              </TableRow>
+              <AnalysisRow
+                key={key}
+                id={analysis.id}
+                repository={project?.name ?? "unknown repository"}
+                repositoryUrl={project?.repository_url ?? ""}
+                updated={formatUpdatedAt(analysis.updated_at)}
+                initial={initial}
+                staleAtRender={isStale(analysis, currentTime)}
+              />
             );
           })}
         </TableBody>
       </Table>
     </Card>
   );
+}
+
+function progressOf(row: {
+  status: string;
+  stage: string | null;
+  stage_message: string | null;
+  error: string | null;
+}): Progress {
+  if (!isStatus(row.status)) {
+    throw new Error(`Stored analysis has an unknown status: ${row.status}`);
+  }
+  if (row.stage !== null && !isStage(row.stage)) {
+    throw new Error(`Stored analysis has an unknown stage: ${row.stage}`);
+  }
+  return {
+    status: row.status,
+    stage: row.stage,
+    message: row.status === "failed" ? row.error : row.stage_message,
+  };
 }
 
 export default function Home() {
@@ -227,6 +179,7 @@ export default function Home() {
             Repositories mapped by this workspace.
           </p>
         </header>
+        <SubmitForm />
         <Suspense fallback={<AnalysesLoading />}>
           <AnalysesList />
         </Suspense>
