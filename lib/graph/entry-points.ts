@@ -37,12 +37,25 @@ const TOOL_CONFIG = /(?:^|\/)[^/]*\.config\.[cm]?[jt]s$/;
 const TEST_FILE = /(?:^|\/)(?:__tests__|__mocks__)\//;
 const TEST_NAME = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
+// In a monorepo the package sits above the project, so strip apps/<name>/ or
+// packages/<name>/ and then src/. A path without either is left as it was.
+function withoutProjectPrefix(path: string): string {
+  const workspace = /^(?:apps|packages)\/[^/]+\//.exec(path);
+  let projectPath = workspace ? path.slice(workspace[0].length) : path;
+
+  if (projectPath.startsWith("src/")) {
+    projectPath = projectPath.slice(4);
+  }
+
+  return projectPath;
+}
+
 export function isConventionEntry(path: string): boolean {
   if (!CODE.test(path)) {
     return false;
   }
 
-  const projectPath = path.startsWith("src/") ? path.slice(4) : path;
+  const projectPath = withoutProjectPrefix(path);
   const name = projectPath
     .slice(projectPath.lastIndexOf("/") + 1)
     .replace(CODE, "");

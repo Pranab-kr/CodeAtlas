@@ -96,7 +96,8 @@ export function buildFlowGraph({
     }
 
     if (object.kind === "folded") {
-      const matched = focus?.counts.get(object.id) ?? null;
+      const matched =
+        focus === null ? null : (focus.counts.get(object.id) ?? 0);
       const inCategory = focus === null || (matched ?? 0) > 0;
       const inSelection =
         highlight === null ||
@@ -204,7 +205,8 @@ function panelNode(
     object.rows.some((row) => lit(row.path)) ||
     (object.scrolls &&
       (lit(ABOVE_HANDLE) || lit(BELOW_HANDLE)));
-  const matched = focus?.counts.get(object.id) ?? null;
+  const matched =
+    focus === null ? null : (focus.counts.get(object.id) ?? 0);
   const inCategory = (handle: string): boolean =>
     focus === null ||
     focus.endpoints.has(endpointKey(object.id, handle));
