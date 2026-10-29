@@ -1,4 +1,20 @@
 import { Suspense } from "react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type AnalysisStatus = "queued" | "running" | "succeeded" | "failed";
@@ -49,53 +65,54 @@ function Status({ status }: { status: string }) {
     : { dot: "bg-muted-foreground/50", text: "text-muted-foreground" };
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 font-mono text-[11px] ${style.text}`}
+    <Badge
+      variant="outline"
+      className={`h-4 gap-1.5 px-1.5 font-mono text-[10.5px] font-normal ${style.text}`}
     >
       <span aria-hidden className={`size-1.5 rounded-full ${style.dot}`} />
       {known ? STATUS_LABELS[status] : status}
-    </span>
+    </Badge>
   );
 }
 
 function AnalysesLoading() {
   return (
-    <div className="mt-4 border border-border bg-surface px-3 py-3 font-mono text-[11px] text-muted-foreground">
-      Reading analyses…
-    </div>
+    <Card className="mt-4 gap-0 py-0">
+      <CardContent className="px-3 py-3 font-mono text-[11px] text-muted-foreground">
+        Reading analyses…
+      </CardContent>
+    </Card>
   );
 }
 
 function AnalysesEmpty() {
   return (
-    <div className="mt-4 border border-border bg-surface">
-      <div className="border-b border-border bg-surface-muted/60 px-3 py-1.5 text-[10.5px] text-muted-foreground">
-        analyses
-      </div>
-      <div className="px-3 py-10">
+    <Card className="mt-4 gap-0 py-0">
+      <CardHeader className="bg-muted/60 px-3 py-1.5">
+        <CardTitle className="font-mono text-[10.5px] font-normal text-muted-foreground">
+          analyses
+        </CardTitle>
+      </CardHeader>
+      <Separator />
+      <CardContent className="px-3 py-10">
         <p className="text-[12px]">No analyses in this workspace yet.</p>
         <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
           The first repository mapped by this team will appear here with its
           state.
         </p>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function AnalysesError({ message }: { message: string }) {
   return (
-    <div
-      role="alert"
-      className="mt-4 border border-destructive/40 bg-destructive/5 px-3 py-2"
-    >
-      <p className="text-[12px] font-medium text-destructive">
-        Could not read analyses.
-      </p>
-      <p className="mt-0.5 font-mono text-[10.5px] wrap-break-word text-destructive">
+    <Alert variant="destructive" className="mt-4">
+      <AlertTitle>Could not read analyses.</AlertTitle>
+      <AlertDescription className="font-mono text-[10.5px] wrap-break-word">
         {message}
-      </p>
-    </div>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -135,31 +152,22 @@ async function AnalysesList() {
   );
 
   return (
-    <div className="mt-4 overflow-hidden border border-border bg-surface">
-      <table className="w-full table-fixed border-collapse">
-        <thead>
-          <tr className="border-b border-border bg-surface-muted/60">
-            <th
-              scope="col"
-              className="px-3 py-1.5 text-left text-[10.5px] font-medium text-muted-foreground"
-            >
+    <Card className="mt-4 gap-0 py-0">
+      <Table className="table-fixed">
+        <TableHeader>
+          <TableRow className="bg-muted/60 hover:bg-muted/60">
+            <TableHead className="h-7 px-3 text-[10.5px] font-medium text-muted-foreground">
               repository
-            </th>
-            <th
-              scope="col"
-              className="w-24 px-3 py-1.5 text-left text-[10.5px] font-medium text-muted-foreground"
-            >
+            </TableHead>
+            <TableHead className="h-7 w-24 px-3 text-[10.5px] font-medium text-muted-foreground">
               state
-            </th>
-            <th
-              scope="col"
-              className="hidden w-36 px-3 py-1.5 text-left text-[10.5px] font-medium text-muted-foreground sm:table-cell"
-            >
+            </TableHead>
+            <TableHead className="hidden h-7 w-36 px-3 text-[10.5px] font-medium text-muted-foreground sm:table-cell">
               updated
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {analyses.map((analysis) => {
             const project = projectsById.get(analysis.project_id);
             const detail =
@@ -168,11 +176,8 @@ async function AnalysesList() {
                 : analysis.stage_message;
 
             return (
-              <tr
-                key={analysis.id}
-                className="border-b border-border last:border-b-0"
-              >
-                <td className="px-3 py-2 align-top">
+              <TableRow key={analysis.id}>
+                <TableCell className="px-3 py-2 align-top">
                   <p
                     className="truncate font-mono text-[12px]"
                     title={project?.repository_url}
@@ -191,24 +196,24 @@ async function AnalysesList() {
                       {detail}
                     </p>
                   ) : null}
-                </td>
-                <td className="px-3 py-2 align-middle">
+                </TableCell>
+                <TableCell className="px-3 py-2">
                   <Status status={analysis.status} />
-                </td>
-                <td className="hidden px-3 py-2 align-middle sm:table-cell">
+                </TableCell>
+                <TableCell className="hidden px-3 py-2 sm:table-cell">
                   <time
                     dateTime={analysis.updated_at}
                     className="font-mono text-[10.5px] text-muted-foreground"
                   >
                     {formatUpdatedAt(analysis.updated_at)}
                   </time>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 

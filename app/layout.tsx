@@ -1,14 +1,15 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { cookies } from "next/headers";
-import { env } from "@/lib/env";
-import { isThemePreference, THEME_COOKIE } from "./theme-preference";
-import { ThemeProvider } from "./theme-provider";
+import { Geist_Mono, Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";import { env } from "@/lib/env";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// The shadcn preset sets the sans face to Inter. Paths and identifiers stay
+// monospace.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -22,23 +23,20 @@ export const metadata: Metadata = {
   description: "A dependency map of a codebase, drawn from the code itself.",
 };
 
-// The theme cookie is read here so the root element ships with the right
-// theme. That makes the layout request-bound rather than prerenderable.
-export const instant = false;
-
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value;
-  const theme = isThemePreference(cookieTheme) ? cookieTheme : "system";
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      data-theme={theme}
-      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      className={cn("h-full", inter.variable, geistMono.variable)}
       suppressHydrationWarning
     >
       <body className="min-h-dvh bg-background text-foreground antialiased">
-        <ThemeProvider initialTheme={theme}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <ClerkProvider
             publishableKey={env.clerkPublishableKey}
             signInUrl={env.clerkSignInUrl}
@@ -48,20 +46,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             afterSignOutUrl="/sign-in"
             appearance={{
               variables: {
-                colorPrimary: "var(--accent)",
-                colorPrimaryForeground: "var(--accent-foreground)",
+                colorPrimary: "var(--primary)",
+                colorPrimaryForeground: "var(--primary-foreground)",
                 colorForeground: "var(--foreground)",
-                colorMuted: "var(--surface-muted)",
+                colorMuted: "var(--muted)",
                 colorMutedForeground: "var(--muted-foreground)",
-                colorBackground: "var(--surface)",
-                colorInput: "var(--surface)",
+                colorBackground: "var(--card)",
+                colorInput: "var(--background)",
                 colorInputForeground: "var(--foreground)",
                 colorBorder: "var(--border)",
-                borderRadius: "4px",
+                borderRadius: "0px",
               },
             }}
           >
-            {children}
+            <TooltipProvider>{children}</TooltipProvider>
           </ClerkProvider>
         </ThemeProvider>
       </body>

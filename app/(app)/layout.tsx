@@ -1,7 +1,8 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { ThemeControl } from "@/app/theme-control";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Separator } from "@/components/ui/separator";
 import { requireActiveOrganization } from "@/lib/active-org";
 
 async function OrganizationBadge() {
@@ -19,11 +20,11 @@ async function OrganizationBadge() {
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface px-3">
+      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
         <Link href="/" className="text-[13px] font-medium tracking-tight">
           CodeAtlas
         </Link>
-        <span aria-hidden className="h-4 w-px bg-border" />
+        <Separator orientation="vertical" className="h-4" />
         <Suspense fallback={<span className="h-3 w-40" />}>
           <OrganizationBadge />
         </Suspense>
@@ -34,7 +35,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             afterSelectOrganizationUrl="/"
             afterCreateOrganizationUrl="/"
           />
-          <ThemeControl />
+          <ModeToggle />
           <UserButton />
         </div>
       </header>
