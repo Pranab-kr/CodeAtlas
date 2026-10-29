@@ -109,9 +109,13 @@ export function foldModules(
   const fanOut = new Map<string, Set<string>>();
   const fanIn = new Map<string, Set<string>>();
 
+  // Fan counts distinct files on the other side of the boundary, the same
+  // unit a file's own fan-in and fan-out use.
   for (const edge of foldedEdges) {
-    getSet(fanOut, edge.source).add(edge.target);
-    getSet(fanIn, edge.target).add(edge.source);
+    for (const pair of edge.files) {
+      getSet(fanOut, edge.source).add(pair.target);
+      getSet(fanIn, edge.target).add(pair.source);
+    }
   }
 
   for (const entry of modules) {

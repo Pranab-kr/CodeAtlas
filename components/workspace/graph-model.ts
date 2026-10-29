@@ -1,12 +1,18 @@
-import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 
-import type { FilePair, FoldedModule, FoldResult } from "@/lib/graph/fold";
-import type { ModuleLayout } from "@/lib/graph/layout";
+import type { Box } from "@/lib/graph/layout";
+import {
+  ABOVE_HANDLE,
+  BELOW_HANDLE,
+  endpointKey,
+  type MapView,
+  type PanelObject,
+} from "@/lib/graph/view";
 import { categoryKeyOfPath } from "@/lib/workspace/categories";
 
 export type GraphFocus =
   | { kind: "node"; id: string }
-  | { kind: "file"; nodeId: string; path: string }
+  | { kind: "file"; path: string }
   | null;
 
 export type ModuleNodeData = {
@@ -22,8 +28,6 @@ export type ModuleNodeData = {
 export type PanelRowData = {
   path: string;
   label: string;
-  inHandle: string;
-  outHandle: string;
   fanIn: number;
   fanOut: number;
   tone: number;
@@ -38,331 +42,238 @@ export type ModulePanelData = {
   fanIn: number;
   fanOut: number;
   rows: PanelRowData[];
+  scrolls: boolean;
+  offset: number;
+  above: number;
+  below: number;
   selected: boolean;
   dimmed: boolean;
+  aboveDimmed: boolean;
+  belowDimmed: boolean;
 };
 
 export type ModuleFlowNode = Node<ModuleNodeData, "module">;
 export type PanelFlowNode = Node<ModulePanelData, "panel">;
 export type FlowModuleNode = ModuleFlowNode | PanelFlowNode;
 
-interface PanelModel {
-  rows: Array<{
-    path: string;
-    label: string;
-    inHandle: string;
-    outHandle: string;
-    fanIn: number;
-    fanOut: number;
-    tone: number;
-  }>;
-  handles: Map<string, { in: string; out: string }>;
+interface Highlight {
+  endpoints: ReadonlySet<string>;
+  objects: ReadonlySet<string>;
+  incoming: ReadonlySet<string>;
+  outgoing: ReadonlySet<string>;
 }
 
-interface RenderedEdge {
-  key: string;
-  source: string;
-  target: string;
-  sourceHandle: string;
-  targetHandle: string;
-  sourceModule: string;
-  targetModule: string;
-  files: FilePair[];
-}
-
-const NEUTRAL_EDGE = "var(--muted-foreground)";
+const NEUTRAL_EDGE = "var(--edge)";
 const INCOMING_EDGE = "var(--incoming)";
 const OUTGOING_EDGE = "var(--outgoing)";
+const DIM_EDGE_OPACITY = 0.15;
 
 export function buildFlowGraph({
-  fold,
-  layout,
-  expanded,
+  view,
+  boxes,
   focus,
   tones,
-  visibleFiles,
 }: {
-  fold: FoldResult;
-  layout: ModuleLayout;
-  expanded: ReadonlySet<string>;
+  view: MapView;
+  boxes: ReadonlyMap<string, Box>;
   focus: GraphFocus;
   tones: ReadonlyMap<string, number>;
-  visibleFiles?: ReadonlyMap<string, ReadonlySet<string>>;
 }): { nodes: FlowModuleNode[]; edges: Edge[] } {
-  const modulesById = new Map(
-    fold.modules.map((module) => [module.id, module]),
-  );
-  const panels = new Map<string, PanelModel>();
-
-  for (const entry of fold.modules) {
-    if (expanded.has(entry.id)) {
-      panels.set(entry.id, buildPanelModel(entry, tones));
-    }
-  }
-
-  const renderedEdges = buildRenderedEdges(fold, panels, visibleFiles);
-  const connectedModules = new Set<string>();
-  const connectedFiles = new Set<string>();
-
-  if (focus?.kind === "node") {
-    connectedModules.add(focus.id);
-  }
-  if (focus?.kind === "file") {
-    connectedModules.add(focus.nodeId);
-    connectedFiles.add(focus.path);
-  }
-
-  for (const edge of renderedEdges) {
-    if (edgeDirection(edge, focus) === null) {
-      continue;
-    }
-    connectedModules.add(edge.sourceModule);
-    connectedModules.add(edge.targetModule);
-    for (const pair of edge.files) {
-      connectedFiles.add(pair.source);
-      connectedFiles.add(pair.target);
-    }
-  }
-
-  const nodes: FlowModuleNode[] = layout.nodes.map((layoutNode) => {
-    const entry = modulesById.get(layoutNode.id);
-    if (!entry) {
-      throw new Error(`Layout node has no module: ${layoutNode.id}`);
+  const highlight = highlightFor(view, focus);
+  const nodes = view.objects.map((object): FlowModuleNode => {
+    const box = boxes.get(object.id);
+    if (!box) {
+      throw new Error(`No layout box for ${object.id}`);
     }
 
-    const selected =
-      focus?.kind === "node" && focus.id === entry.id;
-    const dimmed = focus !== null && !connectedModules.has(entry.id);
-    const isOpen = expanded.has(entry.id);
-
-    if (!isOpen) {
+    if (object.kind === "folded") {
       return {
-        id: entry.id,
+        id: object.id,
         type: "module",
-        position: { x: layoutNode.x, y: layoutNode.y },
-        style: { width: layoutNode.width, height: layoutNode.height },
+        position: { x: box.x, y: box.y },
+        style: { width: box.width, height: box.height },
         data: {
-          label: entry.label,
-          directory: entry.directory,
-          fileCount: entry.files.length,
-          fanIn: entry.fanIn,
-          fanOut: entry.fanOut,
-          selected,
-          dimmed,
+          label: object.label,
+          directory: object.directory,
+          fileCount: object.fileCount,
+          fanIn: object.fanIn,
+          fanOut: object.fanOut,
+          selected: focus?.kind === "node" && focus.id === object.id,
+          dimmed:
+            highlight !== null &&
+            !highlight.objects.has(object.id) &&
+            !highlight.endpoints.has(
+              endpointKey(object.id, null),
+            ),
         },
         draggable: false,
         selectable: false,
         connectable: false,
         focusable: false,
-        zIndex: selected ? 10 : 0,
+        zIndex: focus?.kind === "node" && focus.id === object.id ? 10 : 0,
       };
     }
 
-    const panel = panels.get(entry.id);
-    if (!panel) {
-      throw new Error(`Expanded module has no panel model: ${entry.id}`);
-    }
-
-    const rows: PanelRowData[] = panel.rows.map((row) => ({
-      path: row.path,
-      label: row.label,
-      inHandle: row.inHandle,
-      outHandle: row.outHandle,
-      fanIn: row.fanIn,
-      fanOut: row.fanOut,
-      tone: row.tone,
-      selected: focus?.kind === "file" && focus.path === row.path,
-      dimmed: rowDimmed(entry, row.path, focus, connectedFiles),
-    }));
-
-    return {
-      id: entry.id,
-      type: "panel",
-      position: { x: layoutNode.x, y: layoutNode.y },
-      style: { width: layoutNode.width, height: layoutNode.height },
-      data: {
-        label: entry.label,
-        directory: entry.directory,
-        fileCount: entry.files.length,
-        fanIn: entry.fanIn,
-        fanOut: entry.fanOut,
-        rows,
-        selected,
-        dimmed,
-      },
-      draggable: false,
-      selectable: false,
-      connectable: false,
-      focusable: false,
-      zIndex: selected ? 10 : 0,
-    };
+    return panelNode(object, box, focus, highlight, tones);
   });
 
-  const edges: Edge[] = renderedEdges.map((edge, index) => {
-    const direction = edgeDirection(edge, focus);
-    const stroke =
-      direction === "incoming"
-        ? INCOMING_EDGE
-        : direction === "outgoing"
-          ? OUTGOING_EDGE
-          : NEUTRAL_EDGE;
-    const opacity =
-      focus === null ? 0.3 : direction === null ? 0.14 : 1;
+  const dim: Edge[] = [];
+  const bright: Edge[] = [];
 
-    return {
-      id: `edge-${index}`,
+  for (const edge of view.edges) {
+    const incoming = highlight?.incoming.has(edge.id) ?? false;
+    const outgoing = highlight?.outgoing.has(edge.id) ?? false;
+    const stroke = incoming
+      ? INCOMING_EDGE
+      : outgoing
+        ? OUTGOING_EDGE
+        : NEUTRAL_EDGE;
+    const styled: Edge = {
+      id: edge.id,
       source: edge.source,
+      sourceHandle: edge.sourceHandle ?? undefined,
       target: edge.target,
-      sourceHandle: edge.sourceHandle,
-      targetHandle: edge.targetHandle,
+      targetHandle: edge.targetHandle ?? undefined,
       type: "default",
-      style: { stroke, strokeWidth: 1, opacity },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: stroke,
-        width: 10,
-        height: 10,
+      style: {
+        stroke,
+        // Thickness says how many imports one line stands for, gently.
+        strokeWidth: Math.min(
+          2.5,
+          1 + Math.log2(edge.count) / 3,
+        ),
+        opacity:
+          highlight === null || incoming || outgoing
+            ? 1
+            : DIM_EDGE_OPACITY,
       },
       selectable: false,
       focusable: false,
     };
-  });
 
-  return { nodes, edges };
+    if (incoming || outgoing) {
+      bright.push(styled);
+    } else {
+      dim.push(styled);
+    }
+  }
+
+  // Bright edges are drawn last so they cross over the dim ones. Order, not
+  // zIndex: a raised edge would also draw over the nodes.
+  return { nodes, edges: [...dim, ...bright] };
 }
 
-function buildPanelModel(
-  module: FoldedModule,
+function panelNode(
+  object: PanelObject,
+  box: Box,
+  focus: GraphFocus,
+  highlight: Highlight | null,
   tones: ReadonlyMap<string, number>,
-): PanelModel {
-  const sorted = [...module.files].sort((left, right) =>
-    left.path.localeCompare(right.path),
-  );
-  const rows = sorted.map((file, index) => ({
-    path: file.path,
-    label: file.label,
-    inHandle: `in-${index}`,
-    outHandle: `out-${index}`,
-    fanIn: file.fanIn,
-    fanOut: file.fanOut,
-    tone: tones.get(categoryKeyOfPath(file.path)) ?? 0,
-  }));
+): PanelFlowNode {
+  const selected = focus?.kind === "node" && focus.id === object.id;
+  const whole = highlight === null || highlight.objects.has(object.id);
+  const lit = (handle: string): boolean =>
+    whole || (highlight?.endpoints.has(endpointKey(object.id, handle)) ?? false);
+  const anyLit =
+    whole ||
+    object.rows.some((row) => lit(row.path)) ||
+    (object.scrolls &&
+      (lit(ABOVE_HANDLE) || lit(BELOW_HANDLE)));
 
   return {
-    rows,
-    handles: new Map(
-      rows.map((row) => [
-        row.path,
-        { in: row.inHandle, out: row.outHandle },
-      ]),
-    ),
+    id: object.id,
+    type: "panel",
+    position: { x: box.x, y: box.y },
+    style: { width: box.width, height: box.height },
+    data: {
+      label: object.label,
+      directory: object.directory,
+      fileCount: object.fileCount,
+      fanIn: object.fanIn,
+      fanOut: object.fanOut,
+      scrolls: object.scrolls,
+      offset: object.offset,
+      above: object.above,
+      below: object.below,
+      rows: object.rows.map((row) => {
+        const rowSelected =
+          focus?.kind === "file" && focus.path === row.path;
+        return {
+          path: row.path,
+          label: row.label,
+          fanIn: row.fanIn,
+          fanOut: row.fanOut,
+          tone: tones.get(categoryKeyOfPath(row.path)) ?? 0,
+          selected: rowSelected,
+          dimmed:
+            highlight !== null && !rowSelected && !lit(row.path),
+        };
+      }),
+      selected,
+      dimmed: highlight !== null && !anyLit,
+      aboveDimmed: highlight !== null && !lit(ABOVE_HANDLE),
+      belowDimmed: highlight !== null && !lit(BELOW_HANDLE),
+    },
+    draggable: false,
+    selectable: false,
+    connectable: false,
+    focusable: false,
+    zIndex: selected ? 10 : 0,
   };
 }
 
-function buildRenderedEdges(
-  fold: FoldResult,
-  panels: ReadonlyMap<string, PanelModel>,
-  visibleFiles: ReadonlyMap<string, ReadonlySet<string>> | undefined,
-): RenderedEdge[] {
-  const grouped = new Map<string, RenderedEdge>();
-
-  for (const moduleEdge of fold.edges) {
-    const sourcePanel = panels.get(moduleEdge.source);
-    const targetPanel = panels.get(moduleEdge.target);
-    const sourceVisible = visibleFiles?.get(moduleEdge.source);
-    const targetVisible = visibleFiles?.get(moduleEdge.target);
-
-    for (const pair of moduleEdge.files) {
-      if (sourcePanel && sourceVisible && !sourceVisible.has(pair.source)) {
-        continue;
-      }
-      if (targetPanel && targetVisible && !targetVisible.has(pair.target)) {
-        continue;
-      }
-
-      const sourceHandle = sourcePanel
-        ? sourcePanel.handles.get(pair.source)?.out
-        : "out";
-      const targetHandle = targetPanel
-        ? targetPanel.handles.get(pair.target)?.in
-        : "in";
-
-      if (!sourceHandle || !targetHandle) {
-        throw new Error(
-          `No handle for ${pair.source} -> ${pair.target}`,
-        );
-      }
-
-      const key = `${moduleEdge.source}\u0000${sourceHandle}\u0000${moduleEdge.target}\u0000${targetHandle}`;
-      let rendered = grouped.get(key);
-      if (!rendered) {
-        rendered = {
-          key,
-          source: moduleEdge.source,
-          target: moduleEdge.target,
-          sourceHandle,
-          targetHandle,
-          sourceModule: moduleEdge.source,
-          targetModule: moduleEdge.target,
-          files: [],
-        };
-        grouped.set(key, rendered);
-      }
-      rendered.files.push(pair);
-    }
-  }
-
-  return [...grouped.values()].sort((left, right) =>
-    left.key.localeCompare(right.key),
-  );
-}
-
-function rowDimmed(
-  module: FoldedModule,
-  path: string,
+function highlightFor(
+  view: MapView,
   focus: GraphFocus,
-  connectedFiles: ReadonlySet<string>,
-): boolean {
-  if (!focus) {
-    return false;
-  }
-  if (focus.kind === "node" && focus.id === module.id) {
-    return false;
-  }
-  if (focus.kind === "file" && focus.path === path) {
-    return false;
-  }
-  return !connectedFiles.has(path);
-}
-
-function edgeDirection(
-  edge: RenderedEdge,
-  focus: GraphFocus,
-): "incoming" | "outgoing" | null {
+): Highlight | null {
   if (!focus) {
     return null;
   }
+
+  const endpoints = new Set<string>();
+  const objects = new Set<string>();
+  const incoming = new Set<string>();
+  const outgoing = new Set<string>();
 
   if (focus.kind === "node") {
-    if (edge.targetModule === focus.id) {
-      return "incoming";
+    objects.add(focus.id);
+    for (const edge of view.edges) {
+      if (edge.target === focus.id) {
+        incoming.add(edge.id);
+        endpoints.add(
+          endpointKey(edge.source, edge.sourceHandle),
+        );
+      }
+      if (edge.source === focus.id) {
+        outgoing.add(edge.id);
+        endpoints.add(
+          endpointKey(edge.target, edge.targetHandle),
+        );
+      }
     }
-    if (edge.sourceModule === focus.id) {
-      return "outgoing";
-    }
+    return { endpoints, objects, incoming, outgoing };
+  }
+
+  const at = view.endpointOf.get(focus.path);
+  if (!at) {
     return null;
   }
+  const self = endpointKey(at.object, at.handle);
+  endpoints.add(self);
+  // Neighbours come from the file edges rather than the drawn ones, so a
+  // connection to a row inside the same panel still lights up.
+  for (const neighbor of view.neighborsOf.get(focus.path) ?? []) {
+    endpoints.add(neighbor);
+  }
 
-  let incoming = false;
-  let outgoing = false;
-  for (const pair of edge.files) {
-    if (pair.target === focus.path) {
-      incoming = true;
+  for (const edge of view.edges) {
+    if (endpointKey(edge.target, edge.targetHandle) === self) {
+      incoming.add(edge.id);
     }
-    if (pair.source === focus.path) {
-      outgoing = true;
+    if (endpointKey(edge.source, edge.sourceHandle) === self) {
+      outgoing.add(edge.id);
     }
   }
 
-  return incoming ? "incoming" : outgoing ? "outgoing" : null;
+  return { endpoints, objects, incoming, outgoing };
 }

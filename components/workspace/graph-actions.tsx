@@ -6,8 +6,9 @@ export interface GraphActions {
   openModule(id: string): void;
   closeModule(id: string): void;
   selectFile(path: string): void;
+  /** Move a panel's window by this many rows; the view clamps it. */
+  scroll(id: string, offset: number): void;
   clearSelection(): void;
-  reportVisibleFiles(nodeId: string, paths: ReadonlySet<string>): void;
 }
 
 const GraphActionsContext = createContext<GraphActions | null>(null);

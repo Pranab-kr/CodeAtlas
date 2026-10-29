@@ -14,15 +14,21 @@ export function WorkspaceShell({
   detail: ReactNode;
 }) {
   return (
-    <div className="grid h-full min-h-0 grid-cols-[192px_minmax(0,1fr)_300px] overflow-hidden">
-      <aside className="flex min-h-0 flex-col border-r border-border bg-muted/20">
+    <div className="grid h-full min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem] overflow-hidden">
+      <nav
+        aria-label="Categories"
+        className="min-h-0 overflow-y-auto border-r border-border bg-muted/20"
+      >
         {rail}
-      </aside>
-      <section className="relative min-w-0 overflow-hidden bg-background">
+      </nav>
+      <section
+        aria-label="Map"
+        className="relative min-h-0 min-w-0 overflow-hidden bg-background"
+      >
         {map}
       </section>
       <aside
-        aria-label="Detail"
+        aria-label="Details"
         className="min-h-0 overflow-hidden border-l border-border bg-muted/10"
       >
         {detail}

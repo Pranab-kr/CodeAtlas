@@ -22,7 +22,8 @@ import {
 } from "react";
 
 import { foldModules } from "@/lib/graph/fold";
-import { PANEL_MAX_ROWS, layoutModules } from "@/lib/graph/layout";
+import { boundsOf, layoutMap } from "@/lib/graph/layout";
+import { buildView } from "@/lib/graph/view";
 import type { ParsedEdge, ParsedFile } from "@/lib/parser/types";
 import { cn } from "@/lib/utils";
 import { categoryToneMap } from "@/lib/workspace/categories";
@@ -41,9 +42,11 @@ import { ModulePanel } from "./module-panel";
 
 const nodeTypes = { module: ModuleNode, panel: ModulePanel };
 
-const MIN_ZOOM = 0.2;
+const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 2;
-const FIT_PADDING = 0.08;
+/** Initial fit may enlarge a small graph a little, never to poster size. */
+const INITIAL_MAX_ZOOM = 1.25;
+const FIT_PADDING = 0.06;
 
 export function DependencyMap({
   files,
@@ -61,21 +64,6 @@ export function DependencyMap({
   );
 }
 
-function samePaths(
-  left: ReadonlySet<string>,
-  right: ReadonlySet<string>,
-): boolean {
-  if (left.size !== right.size) {
-    return false;
-  }
-  for (const path of left) {
-    if (!right.has(path)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 function GraphCanvas({
   files,
   edges,
@@ -85,146 +73,153 @@ function GraphCanvas({
   edges: readonly ParsedEdge[];
   rootLabel: string;
 }) {
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
-    () => new Set<string>(),
+  const [open, setOpen] = useState<ReadonlyMap<string, number>>(
+    () => new Map(),
   );
   const [focus, setFocus] = useState<GraphFocus>(null);
+  const [refit, setRefit] = useState(0);
   const [ready, setReady] = useState(false);
-  const [visibleFiles, setVisibleFiles] = useState<
-    ReadonlyMap<string, ReadonlySet<string>>
-  >(() => new Map());
+
   const fold = useMemo(
     () => foldModules(files, edges, { rootLabel }),
     [files, edges, rootLabel],
   );
-  const layout = useMemo(
-    () => layoutModules(fold, expanded),
-    [fold, expanded],
+  const expanded = useMemo(
+    () => new Set<string>(open.keys()),
+    [open],
+  );
+  const view = useMemo(
+    () => buildView(fold, edges, expanded, open),
+    [fold, edges, expanded, open],
+  );
+  const boxes = useMemo(
+    () => layoutMap(view.objects, view.edges),
+    [view],
   );
   const tones = useMemo(() => categoryToneMap(files), [files]);
   const graph = useMemo(
-    () =>
-      buildFlowGraph({
-        fold,
-        layout,
-        expanded,
-        focus,
-        tones,
-        visibleFiles,
-      }),
-    [fold, layout, expanded, focus, tones, visibleFiles],
+    () => buildFlowGraph({ view, boxes, focus, tones }),
+    [view, boxes, focus, tones],
   );
 
-  const { getViewport, setViewport } = useReactFlow();
+  const { getZoom, setViewport } = useReactFlow();
   const store = useStoreApi();
   const viewportReady = useStore(
     (state) => state.width > 0 && state.height > 0,
   );
-  const hasFitted = useRef(false);
 
-  const handleInit = useCallback(() => {
+  const refitted = useRef(refit);
+
+  const fitInitial = useCallback(() => {
     setReady(true);
     const { width, height } = store.getState();
     if (!width || !height) {
       return;
     }
-
-    const viewport = getViewportForBounds(
-      layout.bounds,
-      width,
-      height,
-      MIN_ZOOM,
-      1,
-      FIT_PADDING,
+    void setViewport(
+      getViewportForBounds(
+        boundsOf(boxes),
+        width,
+        height,
+        MIN_ZOOM,
+        INITIAL_MAX_ZOOM,
+        FIT_PADDING,
+      ),
     );
-    void setViewport(viewport);
-    hasFitted.current = true;
-  }, [layout, setViewport, store]);
+  }, [boxes, setViewport, store]);
 
+  // Refit after an open, against the layout that open produced. The caller
+  // bumps `refit` in the same update as `open`, so by the time this sees a new
+  // value the boxes are already the new ones, never the state before.
   useEffect(() => {
-    if (!viewportReady) {
+    if (!viewportReady || refit === 0 || refitted.current === refit) {
       return;
     }
+    refitted.current = refit;
 
     const { width, height } = store.getState();
     if (!width || !height) {
       return;
     }
-
-    const currentZoom = getViewport().zoom;
-    const maxZoom = hasFitted.current
-      ? Math.min(currentZoom, MAX_ZOOM)
-      : 1;
-    const viewport = getViewportForBounds(
-      layout.bounds,
-      width,
-      height,
-      MIN_ZOOM,
-      maxZoom,
-      FIT_PADDING,
+    // Capping at the current zoom means this can only ever zoom out.
+    void setViewport(
+      getViewportForBounds(
+        boundsOf(boxes),
+        width,
+        height,
+        MIN_ZOOM,
+        getZoom(),
+        FIT_PADDING,
+      ),
     );
+  }, [viewportReady, refit, boxes, getZoom, setViewport, store]);
 
-    void setViewport(viewport);
-    hasFitted.current = true;
-  }, [layout, viewportReady, getViewport, setViewport, store]);
+  const openModule = useCallback((id: string) => {
+    setOpen((previous) => new Map(previous).set(id, 0));
+    setFocus({ kind: "node", id });
+    setRefit((count) => count + 1);
+  }, []);
 
-  const openModule = useCallback(
+  const closeModule = useCallback(
     (id: string) => {
-      setExpanded((previous) => {
-        const next = new Set(previous);
-        next.add(id);
+      setOpen((previous) => {
+        if (!previous.has(id)) {
+          return previous;
+        }
+        const next = new Map(previous);
+        next.delete(id);
         return next;
       });
-      const entry = fold.modules.find((module) => module.id === id);
-      if (entry) {
-        setVisibleFiles((previous) => {
-          const next = new Map(previous);
-          next.set(
-            id,
-            new Set(
-              entry.files
-                .slice(0, PANEL_MAX_ROWS)
-                .map((file) => file.path),
-            ),
-          );
-          return next;
-        });
-      }
-      setFocus({ kind: "node", id });
+      setFocus((previous) => {
+        if (previous?.kind === "node" && previous.id === id) {
+          return previous;
+        }
+        if (previous?.kind === "file") {
+          const at = view.endpointOf.get(previous.path);
+          if (at?.object === id) {
+            return null;
+          }
+        }
+        return previous;
+      });
     },
-    [fold],
+    [view],
   );
 
-  const closeModule = useCallback((id: string) => {
-    setExpanded((previous) => {
-      const next = new Set(previous);
-      next.delete(id);
-      return next;
-    });
-    setVisibleFiles((previous) => {
+  const scroll = useCallback((id: string, offset: number) => {
+    setOpen((previous) => {
       if (!previous.has(id)) {
         return previous;
       }
       const next = new Map(previous);
-      next.delete(id);
+      next.set(id, Math.max(0, offset));
       return next;
     });
-    setFocus({ kind: "node", id });
   }, []);
 
-  const reportVisibleFiles = useCallback(
-    (nodeId: string, paths: ReadonlySet<string>) => {
-      setVisibleFiles((previous) => {
-        const current = previous.get(nodeId);
-        if (current && samePaths(current, paths)) {
-          return previous;
-        }
-        const next = new Map(previous);
-        next.set(nodeId, paths);
-        return next;
-      });
-    },
-    [],
+  const selectFile = useCallback((path: string) => {
+    setFocus({ kind: "file", path });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setFocus(null);
+  }, []);
+
+  const actions = useMemo<GraphActions>(
+    () => ({
+      openModule,
+      closeModule,
+      selectFile,
+      scroll,
+      clearSelection,
+    }),
+    [
+      openModule,
+      closeModule,
+      selectFile,
+      scroll,
+      clearSelection,
+    ],
   );
 
   // React Flow only enables pointer events on a node when one of its own
@@ -238,38 +233,6 @@ function GraphCanvas({
     [openModule],
   );
 
-  const selectFile = useCallback(
-    (path: string) => {
-      const nodeId = fold.moduleByFile.get(path);
-      if (!nodeId) {
-        return;
-      }
-      setFocus({ kind: "file", nodeId, path });
-    },
-    [fold],
-  );
-
-  const clearSelection = useCallback(() => {
-    setFocus(null);
-  }, []);
-
-  const actions = useMemo<GraphActions>(
-    () => ({
-      openModule,
-      closeModule,
-      selectFile,
-      clearSelection,
-      reportVisibleFiles,
-    }),
-    [
-      openModule,
-      closeModule,
-      selectFile,
-      clearSelection,
-      reportVisibleFiles,
-    ],
-  );
-
   return (
     <GraphActionsProvider actions={actions}>
       <ReactFlow<FlowModuleNode, Edge>
@@ -277,7 +240,7 @@ function GraphCanvas({
         edges={graph.edges}
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
-        onInit={handleInit}
+        onInit={fitInitial}
         onPaneClick={clearSelection}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
@@ -289,7 +252,6 @@ function GraphCanvas({
         elevateNodesOnSelect={false}
         deleteKeyCode={null}
         zoomOnDoubleClick={false}
-        colorMode="system"
         className={cn(
           "h-full w-full",
           ready ? "opacity-100" : "opacity-0",

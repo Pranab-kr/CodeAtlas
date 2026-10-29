@@ -7,24 +7,29 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import {
-  useCallback,
   useEffect,
   useRef,
-  useState,
   type CSSProperties,
+  type WheelEvent,
 } from "react";
 
 import {
-  PANEL_MAX_ROWS,
+  PAD_X,
+  PANEL_HEADER_HEIGHT,
   PANEL_ROW_HEIGHT,
-  PANEL_STRIP_HEIGHT,
 } from "@/lib/graph/layout";
+import {
+  ABOVE_HANDLE,
+  BELOW_HANDLE,
+  MAX_ROWS,
+} from "@/lib/graph/view";
 import { cn } from "@/lib/utils";
 
 import { useGraphActions } from "./graph-actions";
 import type { PanelFlowNode } from "./graph-model";
 
-const HIDDEN_HANDLE_STYLE: CSSProperties = {
+// Handles are invisible anchors: an edge ends at the row, not at a dot.
+const ANCHOR_STYLE: CSSProperties = {
   width: 1,
   height: 1,
   minWidth: 0,
@@ -34,66 +39,52 @@ const HIDDEN_HANDLE_STYLE: CSSProperties = {
   background: "transparent",
 };
 
-const STRIP_STYLE: CSSProperties = {
-  height: PANEL_STRIP_HEIGHT,
+const HEADER_STYLE: CSSProperties = {
+  height: PANEL_HEADER_HEIGHT,
+  paddingInline: PAD_X,
+};
+
+const ROW_STYLE: CSSProperties = {
+  height: PANEL_ROW_HEIGHT,
+  paddingInline: PAD_X,
 };
 
 export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
-  const { closeModule, selectFile, reportVisibleFiles } =
-    useGraphActions();
+  const { closeModule, selectFile, scroll } = useGraphActions();
+  // Wheel deltas arrive in pixels from trackpads and in lines from some mice;
+  // they add up until they make a whole row, so slow scrolling still moves.
+  const pending = useRef(0);
+  // React Flow measures handles when a node resizes. Scrolling swaps rows at a
+  // fixed size, so the new rows' handles have to be measured explicitly or
+  // their edges have nothing to attach to.
   const updateNodeInternals = useUpdateNodeInternals();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollRange, setScrollRange] = useState(() => ({
-    start: 0,
-    end: Math.min(data.rows.length, PANEL_MAX_ROWS),
-  }));
-
-  const reportVisible = useCallback(() => {
-    const element = scrollRef.current;
-    if (!element) {
-      return;
-    }
-
-    const centre = PANEL_ROW_HEIGHT / 2;
-    const start = Math.max(
-      0,
-      Math.ceil((element.scrollTop - centre) / PANEL_ROW_HEIGHT),
-    );
-    const end = Math.min(
-      data.rows.length,
-      Math.floor(
-        (element.scrollTop + element.clientHeight - centre) /
-          PANEL_ROW_HEIGHT,
-      ) + 1,
-    );
-
-    setScrollRange((previous) =>
-      previous.start === start && previous.end === end
-        ? previous
-        : { start, end },
-    );
-    reportVisibleFiles(
-      id,
-      new Set(
-        data.rows.slice(start, end).map((row) => row.path),
-      ),
-    );
-  }, [data.rows, id, reportVisibleFiles]);
 
   useEffect(() => {
-    reportVisible();
-  }, [reportVisible]);
+    updateNodeInternals(id);
+  }, [id, data.offset, updateNodeInternals]);
 
-  const hasHiddenRows = data.rows.length > PANEL_MAX_ROWS;
-  const above = scrollRange.start;
-  const below = data.rows.length - scrollRange.end;
+  function onWheel(event: WheelEvent) {
+    if (!data.scrolls) {
+      return;
+    }
+    pending.current +=
+      event.deltaMode === 1
+        ? event.deltaY * PANEL_ROW_HEIGHT
+        : event.deltaY;
+    const rows = Math.trunc(pending.current / PANEL_ROW_HEIGHT);
+    if (rows === 0) {
+      return;
+    }
+    pending.current -= rows * PANEL_ROW_HEIGHT;
+    scroll(id, data.offset + rows);
+  }
 
   return (
     <div
       className={cn(
-        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-[3px] border bg-card",
+        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-[4px] border bg-card",
         data.selected ? "border-selection" : "border-border",
-        data.dimmed && "opacity-20",
+        data.dimmed && "opacity-25",
       )}
     >
       <button
@@ -102,9 +93,10 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
           event.stopPropagation();
           closeModule(id);
         }}
-        title={`Close ${data.directory}`}
+        title={`${data.directory} — click to fold`}
+        style={HEADER_STYLE}
         className={cn(
-          "flex h-10 shrink-0 cursor-pointer flex-col justify-center gap-1 border-b border-border px-2 text-left",
+          "flex shrink-0 cursor-pointer flex-col justify-center gap-[2px] border-b border-border text-left",
           data.selected
             ? "bg-selection/[0.06] hover:bg-selection/10"
             : "bg-muted/30 hover:bg-muted/50",
@@ -112,24 +104,30 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
         )}
       >
         <span className="flex w-full items-center gap-2">
-          <span className="min-w-0 truncate font-mono text-[11px] leading-none">
+          <span className="min-w-0 truncate text-[12px] font-semibold leading-4 text-foreground">
             {data.label}
           </span>
-          <span className="ml-auto shrink-0 font-mono text-[9.5px] leading-none text-muted-foreground tabular-nums">
-            {data.fileCount} files
+          <span className="ml-auto shrink-0 text-[10.5px] leading-3 text-muted-foreground tabular-nums">
+            {data.fileCount} {data.fileCount === 1 ? "file" : "files"}
           </span>
           <span
             aria-hidden
-            className="shrink-0 font-mono text-[12px] leading-none text-muted-foreground"
+            className="shrink-0 text-[12px] leading-3 text-muted-foreground"
           >
             ×
           </span>
         </span>
-        <span className="flex w-full items-center gap-2 font-mono text-[9.5px] leading-none tabular-nums">
-          <span className="text-incoming" aria-hidden>
+        <span className="flex w-full items-center gap-2 text-[10.5px] leading-3 tabular-nums">
+          <span
+            className="text-incoming"
+            title="Distinct files that import this"
+          >
             ←{data.fanIn}
           </span>
-          <span className="text-outgoing" aria-hidden>
+          <span
+            className="text-outgoing"
+            title="Distinct files this imports"
+          >
             {data.fanOut}→
           </span>
           <span className="sr-only">
@@ -138,35 +136,36 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
         </span>
         <span className="sr-only">close panel</span>
       </button>
-      {hasHiddenRows && above > 0 ? (
-        <div
-          style={STRIP_STYLE}
-          className="nowheel flex shrink-0 items-center justify-center border-b border-border/60 bg-muted/20 font-mono text-[8.5px] leading-none text-muted-foreground"
-        >
-          ↑ {above} files above
-        </div>
-      ) : null}
-      <div
-        ref={scrollRef}
-        className="nowheel flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]"
-        onScroll={() => {
-          reportVisible();
-          updateNodeInternals(id);
-        }}
+
+      {/* nowheel: the wheel scrolls the rows here instead of zooming the map. */}
+      <ul
+        className={data.scrolls ? "nowheel" : undefined}
+        onWheel={onWheel}
       >
+        {data.scrolls ? (
+          <OffscreenRow
+            handle={ABOVE_HANDLE}
+            count={data.above}
+            label="above"
+            dimmed={data.aboveDimmed}
+            onClick={() =>
+              scroll(id, data.offset - MAX_ROWS)
+            }
+          />
+        ) : null}
+
         {data.rows.map((row) => (
-          <div
+          <li
             key={row.path}
-            className={cn(
-              "relative flex h-[22px] shrink-0 items-center",
-              row.dimmed && "opacity-20",
-            )}
+            className="relative"
+            style={{ height: PANEL_ROW_HEIGHT }}
           >
             <Handle
+              id={row.path}
               type="target"
               position={Position.Left}
-              id={row.inHandle}
-              style={HIDDEN_HANDLE_STYLE}
+              style={ANCHOR_STYLE}
+              isConnectable={false}
             />
             <button
               type="button"
@@ -176,27 +175,37 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
               }}
               aria-pressed={row.selected}
               title={row.path}
+              style={ROW_STYLE}
               className={cn(
-                "flex h-full w-full min-w-0 cursor-pointer items-center gap-2 px-2 text-left font-mono text-[10.5px]",
+                "flex size-full cursor-pointer items-center gap-[6px] text-left text-[11.5px]",
                 row.selected
                   ? "bg-selection/10 text-foreground shadow-[inset_2px_0_0_var(--selection)]"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                row.dimmed && "opacity-25",
                 "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-selection",
               )}
             >
               <span
                 aria-hidden
-                className="size-1.5 shrink-0 rounded-[1px]"
+                className="size-[8px] shrink-0 rounded-[2px]"
                 style={{
                   backgroundColor: `var(--kind-${row.tone + 1})`,
                 }}
               />
-              <span className="min-w-0 truncate">{row.label}</span>
-              <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[9px] tabular-nums">
-                <span className="text-incoming" aria-hidden>
+              <span className="min-w-0 flex-1 truncate font-mono">
+                {row.label}
+              </span>
+              <span className="flex shrink-0 items-center gap-[6px] font-mono text-[10.5px] tabular-nums">
+                <span
+                  className="text-incoming"
+                  title="Distinct files that import this"
+                >
                   ←{row.fanIn}
                 </span>
-                <span className="text-outgoing" aria-hidden>
+                <span
+                  className="text-outgoing"
+                  title="Distinct files this imports"
+                >
                   {row.fanOut}→
                 </span>
                 <span className="sr-only">
@@ -205,22 +214,82 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
               </span>
             </button>
             <Handle
+              id={row.path}
               type="source"
               position={Position.Right}
-              id={row.outHandle}
-              style={HIDDEN_HANDLE_STYLE}
+              style={ANCHOR_STYLE}
+              isConnectable={false}
             />
-          </div>
+          </li>
         ))}
-      </div>
-      {hasHiddenRows && below > 0 ? (
-        <div
-          style={STRIP_STYLE}
-          className="nowheel flex shrink-0 items-center justify-center border-t border-border/60 bg-muted/20 font-mono text-[8.5px] leading-none text-muted-foreground"
-        >
-          ↓ {below} files below
-        </div>
-      ) : null}
+
+        {data.scrolls ? (
+          <OffscreenRow
+            handle={BELOW_HANDLE}
+            count={data.below}
+            label="below"
+            dimmed={data.belowDimmed}
+            onClick={() =>
+              scroll(id, data.offset + MAX_ROWS)
+            }
+          />
+        ) : null}
+      </ul>
     </div>
+  );
+}
+
+// Stands for the files scrolled out of the window on one side. Edges to those
+// files end here, so they stay attached to the panel rather than vanishing.
+// Clicking pages the window that way.
+function OffscreenRow({
+  handle,
+  count,
+  label,
+  dimmed,
+  onClick,
+}: {
+  handle: string;
+  count: number;
+  label: string;
+  dimmed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <li
+      className="relative"
+      style={{ height: PANEL_ROW_HEIGHT }}
+    >
+      <Handle
+        id={handle}
+        type="target"
+        position={Position.Left}
+        style={ANCHOR_STYLE}
+        isConnectable={false}
+      />
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick();
+        }}
+        disabled={count === 0}
+        style={ROW_STYLE}
+        className={cn(
+          "flex size-full items-center text-left font-mono text-[10.5px] tabular-nums",
+          "text-muted-foreground enabled:hover:bg-muted/50 enabled:hover:text-foreground disabled:opacity-50",
+          dimmed && "opacity-25",
+        )}
+      >
+        {count} {count === 1 ? "file" : "files"} {label}
+      </button>
+      <Handle
+        id={handle}
+        type="source"
+        position={Position.Right}
+        style={ANCHOR_STYLE}
+        isConnectable={false}
+      />
+    </li>
   );
 }
