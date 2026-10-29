@@ -41,7 +41,7 @@ export function findInsights(
   // edge of its own view as a finding about the code.
   const unimported = files
     .filter(
-      (file) => file.fanIn === 0 && !isConventionEntry(file.path),
+      (file) => file.fanIn === 0 && !isConventionEntry(file),
     )
     .sort(byPath);
 

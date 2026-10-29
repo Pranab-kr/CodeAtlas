@@ -139,11 +139,13 @@ async function AnalysisBody({ params }: Parameter) {
                 framework: analysis.framework ?? "none",
                 skipped: coverage.files.skipped,
                 unresolved: coverage.imports.unresolved,
-                routes: null,
+                routes: map.routes.length,
               }}
               coverage={coverage}
               files={map.files}
               edges={map.edges}
+              routes={map.routes}
+              routeCoverage={coverage.routes}
             />
           </div>
         )}

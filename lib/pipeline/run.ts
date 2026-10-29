@@ -257,6 +257,11 @@ function storedCoverage(result: ParseResult): Json {
       parsed: result.files.length,
       skipped: result.skipped.length,
     },
+    routes: {
+      listed: result.coverage.routes.listed,
+      omitted: result.coverage.routes.omitted,
+      withheld: result.coverage.routes.withheld,
+    },
   };
 }
 

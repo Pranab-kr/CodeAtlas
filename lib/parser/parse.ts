@@ -1,11 +1,13 @@
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { Node, Project, SyntaxKind, type SourceFile } from "ts-morph";
 
-import {
-  noFrameworkAdapter,
-  type AdapterFile,
-  type FrameworkAdapter,
+import type { Role } from "../roles.ts";
+import { selectAdapter } from "./adapters/index.ts";
+import type {
+  AdapterFile,
+  FrameworkAdapter,
+  ProjectInfo,
 } from "./adapter.ts";
 import { computeFanCounts } from "./graph.ts";
 import { createConfigLoader, resolveModuleReference } from "./resolve.ts";
@@ -16,10 +18,16 @@ import type {
   ParsedEdge,
   ParsedFile,
   ReexportGap,
+  RouteCoverage,
   SkippedFile,
   UnresolvedImport,
 } from "./types.ts";
-import { walkRepository, type DiscoveredFile } from "./walk.ts";
+import {
+  isDeclarationFile,
+  isSourceFile,
+  walkRepository,
+  type DiscoveredFile,
+} from "./walk.ts";
 
 export interface ParseRepositoryOptions {
   adapter?: FrameworkAdapter;
@@ -50,7 +58,7 @@ export function parseRepository(
     throw new Error(`Not a directory: ${root}`);
   }
 
-  const adapter = options.adapter ?? noFrameworkAdapter;
+  const adapter = options.adapter ?? selectAdapter(readProject(root));
   const discovered = walkRepository(root);
   const configLoader = createConfigLoader(root);
   const project = new Project({
@@ -67,8 +75,9 @@ export function parseRepository(
   }
 
   const parsedFiles: DiscoveredFile[] = [];
+  const adapterFiles: AdapterFile[] = [];
   const parseFailures: SkippedFile[] = [];
-  const roles = new Map<string, string | null>();
+  const roles = new Map<string, Role | null>();
   const edgeMap = new Map<string, ParsedEdge>();
   const unresolvedImports: UnresolvedImport[] = [];
   const excludedImports: ExcludedImport[] = [];
@@ -79,8 +88,9 @@ export function parseRepository(
   for (const file of discovered.files) {
     let references: ModuleReference[];
     let nonLiteral: NonLiteralImport[];
+    let sourceFile: SourceFile;
     try {
-      const sourceFile = project.createSourceFile(
+      sourceFile = project.createSourceFile(
         file.absolutePath,
         file.source,
         { overwrite: true },
@@ -97,10 +107,9 @@ export function parseRepository(
     }
 
     parsedFiles.push(file);
-    roles.set(
-      file.path,
-      adapter.classifyFile(toAdapterFile(file))?.role ?? null,
-    );
+    const adapterFile: AdapterFile = { path: file.path, source: sourceFile };
+    adapterFiles.push(adapterFile);
+    roles.set(file.path, adapter.roleOf(adapterFile));
 
     const config = configLoader.forFile(file.absolutePath);
 
@@ -184,6 +193,16 @@ export function parseRepository(
     }
   }
 
+  // Only source files whose syntax is unknown: a declaration file can't set a
+  // global prefix, and counting it would withhold every route for no reason.
+  const unparsed = [
+    ...discovered.skipped
+      .filter(mayHoldRouteSyntax)
+      .map((skip) => skip.path),
+    ...parseFailures.map((failure) => failure.path),
+  ];
+  const routeReport = adapter.routes({ files: adapterFiles, unparsed });
+
   const edges = [...edgeMap.values()].sort(compareEdges);
   const fans = computeFanCounts(parsedFiles, edges);
 
@@ -201,6 +220,12 @@ export function parseRepository(
     left.path.localeCompare(right.path),
   );
 
+  const routes: RouteCoverage = {
+    listed: routeReport.routes.length,
+    omitted: routeReport.omitted.length,
+    withheld: routeReport.withheld,
+  };
+
   const coverage: ImportCoverage = {
     imports,
     reexports: {
@@ -210,23 +235,66 @@ export function parseRepository(
     },
     unresolved: unresolvedImports,
     excluded: excludedImports,
+    routes,
   };
 
   return {
     framework: adapter.name,
     files,
     edges,
+    routes: routeReport.routes,
     skipped,
     coverage,
   };
 }
 
-function toAdapterFile(file: DiscoveredFile): AdapterFile {
-  return {
-    path: file.path,
-    folder: file.folder,
-    source: file.source,
-  };
+/**
+ * Detection reads the root package.json only. A monorepo's nested manifests
+ * don't choose the repository's adapter; the root says what this repo is.
+ */
+function readProject(root: string): ProjectInfo {
+  const dependencies = new Set<string>();
+
+  let raw: string;
+  try {
+    raw = readFileSync(path.join(root, "package.json"), "utf8");
+  } catch {
+    return { dependencies };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { dependencies };
+  }
+
+  if (typeof parsed !== "object" || parsed === null) {
+    return { dependencies };
+  }
+
+  for (const field of ["dependencies", "devDependencies"]) {
+    const record = Reflect.get(parsed, field);
+    if (typeof record !== "object" || record === null) {
+      continue;
+    }
+    for (const name of Object.keys(record)) {
+      dependencies.add(name);
+    }
+  }
+
+  return { dependencies };
+}
+
+function mayHoldRouteSyntax(skip: SkippedFile): boolean {
+  if (
+    skip.reason === "declaration file" ||
+    skip.reason === "package manager generated file"
+  ) {
+    return false;
+  }
+  const name = skip.path.slice(skip.path.lastIndexOf("/") + 1);
+  return isSourceFile(name) && !isDeclarationFile(name);
 }
 
 function extractReferences(sourceFile: SourceFile): {

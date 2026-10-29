@@ -48,8 +48,8 @@ export interface RepositoryFacts {
   framework: string;
   skipped: number;
   unresolved: number;
-  /** Null until the parser extracts routes. */
-  routes: number | null;
+  /** Routes whose method and full pattern are both written in the code. */
+  routes: number;
 }
 
 interface DetailPaneProps {
@@ -326,8 +326,8 @@ function RepositorySummary({
         <Count
           label="Routes"
           value={repository.routes}
-          note={repository.routes === null ? "not parsed yet" : null}
-          title="The parser does not extract routes yet"
+          note={null}
+          title="Routes whose method and full pattern are both written in the code"
         />
       </dl>
 

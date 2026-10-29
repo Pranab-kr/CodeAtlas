@@ -10,9 +10,15 @@ import {
   MAX_ROWS,
   rankModulePaths,
 } from "@/lib/graph/view";
-import type { ParsedEdge, ParsedFile } from "@/lib/parser/types";
+import type {
+  ParsedEdge,
+  ParsedFile,
+  ParsedRoute,
+  RouteCoverage,
+} from "@/lib/parser/types";
 import type { Coverage } from "@/lib/analysis/coverage";
-import { categoriesFromFiles } from "@/lib/workspace/categories";
+import { railCategories, UNCLASSIFIED } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 
 import { CategoryRail } from "./category-rail";
 import { CoverageBanner } from "./coverage-banner";
@@ -22,24 +28,30 @@ import {
   type DetailTab,
   type RepositoryFacts,
 } from "./detail-pane";
+import { RouteTable } from "./route-table";
 import { WorkspaceShell } from "./workspace-shell";
 
 /**
  * Owns what the map and the pane share: which folders are open, how far each
- * is scrolled, what's selected, what's hovered, and which tab the pane has
- * open. Everything either side shows comes from parse output already in the
- * browser, so nothing here makes a request.
+ * is scrolled, what's selected, what's hovered, which tab the pane has open,
+ * and whether the centre column shows the map or the route table. Everything
+ * either side shows comes from parse output already in the browser, so nothing
+ * here makes a request.
  */
 export function AnalysisView({
   repository,
   coverage,
   files,
   edges,
+  routes,
+  routeCoverage,
 }: {
   repository: RepositoryFacts;
   coverage: Coverage | null;
   files: readonly ParsedFile[];
   edges: readonly ParsedEdge[];
+  routes: readonly ParsedRoute[];
+  routeCoverage: RouteCoverage | null;
 }) {
   const fold = useMemo(
     () =>
@@ -47,7 +59,15 @@ export function AnalysisView({
     [files, edges, repository.name],
   );
   const categories = useMemo(
-    () => categoriesFromFiles(files),
+    () => railCategories(repository.framework, files.map((file) => file.role)),
+    [repository.framework, files],
+  );
+  // The map focuses by the same role category the rail counts, not by folder.
+  const categoryOfPath = useMemo(
+    () =>
+      new Map(
+        files.map((file) => [file.path, file.role ?? UNCLASSIFIED] as const),
+      ),
     [files],
   );
 
@@ -64,6 +84,9 @@ export function AnalysisView({
   const [walk, setWalk] = useState<Direction | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
+  // The centre column shows the map or the route table; the rail and the pane
+  // keep working on either.
+  const [centre, setCentre] = useState<"map" | "routes">("map");
   // Empty means every type. Held here so it survives switching selection.
   const [types, setTypes] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -197,23 +220,61 @@ export function AnalysisView({
       }
       map={
         <div className="flex h-full min-h-0 flex-col">
-          {coverage ? <CoverageBanner coverage={coverage} /> : null}
-          <div className="min-h-0 flex-1">
-            <DependencyMap
-              edges={edges}
-              fold={fold}
-              open={open}
-              selection={selection}
-              hover={hover}
-              category={category}
-              refit={refit}
-              onOpen={openModule}
-              onClose={closeModule}
-              onSelectFile={selectFile}
-              onScroll={scroll}
-              onHover={setHover}
-              onDeselect={deselect}
+          <div
+            role="tablist"
+            className="flex h-7 shrink-0 items-end gap-3 border-b border-border bg-card px-3 text-[11px]"
+          >
+            <CentreTab
+              label="Map"
+              on={centre === "map"}
+              onClick={() => setCentre("map")}
             />
+            <CentreTab
+              label="Routes"
+              count={routes.length}
+              on={centre === "routes"}
+              onClick={() => setCentre("routes")}
+            />
+          </div>
+          <div className="relative min-h-0 flex-1">
+            {/* The map stays mounted under the table, so switching back keeps
+                its viewport and React Flow's measurements. */}
+            <div
+              className={cn(
+                "absolute inset-0 flex flex-col",
+                centre !== "map" && "invisible",
+              )}
+            >
+              {coverage ? <CoverageBanner coverage={coverage} /> : null}
+              <div className="min-h-0 flex-1">
+                <DependencyMap
+                  edges={edges}
+                  fold={fold}
+                  open={open}
+                  selection={selection}
+                  hover={hover}
+                  category={category}
+                  categoryOfPath={categoryOfPath}
+                  refit={refit}
+                  onOpen={openModule}
+                  onClose={closeModule}
+                  onSelectFile={selectFile}
+                  onScroll={scroll}
+                  onHover={setHover}
+                  onDeselect={deselect}
+                />
+              </div>
+            </div>
+            {centre === "routes" ? (
+              <RouteTable
+                routes={routes}
+                coverage={routeCoverage}
+                selection={selection}
+                hover={hover}
+                onReveal={reveal}
+                onHover={setHover}
+              />
+            ) : null}
           </div>
         </div>
       }
@@ -239,5 +300,39 @@ export function AnalysisView({
         />
       }
     />
+  );
+}
+
+function CentreTab({
+  label,
+  count,
+  on,
+  onClick,
+}: {
+  label: string;
+  count?: number;
+  on: boolean;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      onClick={onClick}
+      className={cn(
+        "-mb-px border-b pb-1.5",
+        on
+          ? "border-selection text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+      {count !== undefined ? (
+        <span className="ml-1 font-mono text-[10px] text-muted-foreground tabular-nums">
+          {count}
+        </span>
+      ) : null}
+    </button>
   );
 }

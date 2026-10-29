@@ -62,6 +62,8 @@ export interface DependencyMapProps {
   hover: Selection;
   /** The rail category being focused, if any. */
   category: string | null;
+  /** The rail category each file belongs to, by path. */
+  categoryOfPath: ReadonlyMap<string, string>;
   /** Changes whenever an open should refit the view to the new layout. */
   refit: number;
   onOpen(id: string): void;
@@ -87,6 +89,7 @@ function GraphCanvas({
   selection,
   hover,
   category,
+  categoryOfPath,
   refit,
   onOpen,
   onClose,
@@ -110,8 +113,15 @@ function GraphCanvas({
     [view],
   );
   const graph = useMemo(
-    () => buildFlowGraph({ view, boxes, selection, category }),
-    [view, boxes, selection, category],
+    () =>
+      buildFlowGraph({
+        view,
+        boxes,
+        selection,
+        category,
+        categoryOfPath,
+      }),
+    [view, boxes, selection, category, categoryOfPath],
   );
   const mapHover = useMemo<MapHover>(
     () => ({

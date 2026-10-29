@@ -10,7 +10,6 @@ import {
   type MapView,
   type PanelObject,
 } from "@/lib/graph/view";
-import { categoryKeyOfPath } from "@/lib/workspace/categories";
 import { kindToneOfPath } from "@/lib/workspace/kinds";
 
 export type ModuleNodeData = {
@@ -80,15 +79,18 @@ export function buildFlowGraph({
   boxes,
   selection,
   category,
+  categoryOfPath,
 }: {
   view: MapView;
   boxes: ReadonlyMap<string, Box>;
   selection: Selection;
   /** The rail category being focused, if any. */
   category: string | null;
+  /** The rail category each file belongs to, by path. */
+  categoryOfPath: ReadonlyMap<string, string>;
 }): { nodes: FlowModuleNode[]; edges: Edge[] } {
   const highlight = highlightFor(view, selection);
-  const focus = categoryFocus(view, category);
+  const focus = categoryFocus(view, category, categoryOfPath);
   const nodes = view.objects.map((object): FlowModuleNode => {
     const box = boxes.get(object.id);
     if (!box) {
@@ -274,6 +276,7 @@ interface CategoryFocus {
 function categoryFocus(
   view: MapView,
   category: string | null,
+  categoryOfPath: ReadonlyMap<string, string>,
 ): CategoryFocus | null {
   if (category === null) {
     return null;
@@ -283,7 +286,7 @@ function categoryFocus(
   const counts = new Map<string, number>();
 
   for (const [path, at] of view.endpointOf) {
-    if (categoryKeyOfPath(path) !== category) {
+    if (categoryOfPath.get(path) !== category) {
       continue;
     }
     endpoints.add(endpointKey(at.object, at.handle));

@@ -74,6 +74,38 @@ function printSummary(root: string, result: ParseResult): void {
 
   console.log(`Repository: ${root}`);
   console.log(`Framework: ${result.framework}`);
+
+  const roleCounts = new Map<string, number>();
+  for (const file of result.files) {
+    if (file.role === null) {
+      continue;
+    }
+    roleCounts.set(file.role, (roleCounts.get(file.role) ?? 0) + 1);
+  }
+  console.log(
+    `Roles: ${
+      [...roleCounts.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([role, count]) => `${role} ${count}`)
+        .join(", ") || "none assigned"
+    }`,
+  );
+
+  console.log(
+    `Routes: ${result.routes.length} listed` +
+      (result.coverage.routes.omitted > 0
+        ? `, ${result.coverage.routes.omitted} omitted`
+        : "") +
+      (result.coverage.routes.withheld
+        ? `, withheld: ${result.coverage.routes.withheld}`
+        : ""),
+  );
+  for (const route of result.routes) {
+    console.log(
+      `  ${route.method} ${route.pattern}  ${route.path}:${route.line}`,
+    );
+  }
+
   console.log(
     `Files: ${found} found = ${result.files.length} parsed + ${result.skipped.length} skipped`,
   );

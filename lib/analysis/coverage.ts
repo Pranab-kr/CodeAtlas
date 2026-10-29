@@ -1,3 +1,4 @@
+import type { RouteCoverage } from "@/lib/parser/types";
 import type { Json } from "@/lib/supabase/database.types";
 
 /** The part of the parser's coverage report the map has stored. */
@@ -17,6 +18,8 @@ export interface Coverage {
     parsed: number;
     skipped: number;
   };
+  /** Null for an analysis stored before routes were extracted. */
+  routes: RouteCoverage | null;
 }
 
 export interface CoverageSummary {
@@ -54,6 +57,7 @@ export function readCoverage(value: Json | null): Coverage | null {
   const reexportResolved = asNumber(reexports.resolved);
   const parsed = asNumber(files.parsed);
   const skipped = asNumber(files.skipped);
+  const routes = readRouteCoverage(root.routes);
 
   if (
     seen === null ||
@@ -73,7 +77,27 @@ export function readCoverage(value: Json | null): Coverage | null {
     imports: { seen, resolved, external, excluded, unresolved },
     reexports: { seen: reexportSeen, resolved: reexportResolved },
     files: { parsed, skipped },
+    routes,
   };
+}
+
+function readRouteCoverage(value: Json | undefined): RouteCoverage | null {
+  const record = asRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const listed = asNumber(record.listed);
+  const omitted = asNumber(record.omitted);
+  const withheld = record.withheld;
+  if (listed === null || omitted === null) {
+    return null;
+  }
+  if (withheld !== undefined && withheld !== null && typeof withheld !== "string") {
+    return null;
+  }
+
+  return { listed, omitted, withheld: withheld ?? null };
 }
 
 export function coverageSummary(coverage: Coverage): CoverageSummary {

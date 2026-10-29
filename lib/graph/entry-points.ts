@@ -1,8 +1,27 @@
 // Files a framework or tool reaches without an import: pages, route handlers,
-// layouts, middleware and config. The import graph was never going to show a
-// connection that isn't an import, so these are left out of "nothing imports
-// these" rather than reported as unused. Until the framework adapters assign
-// roles, this reads the conventions off the path.
+// controllers, layouts, middleware and config. The import graph was never
+// going to show a connection that isn't an import, so these are left out of
+// "nothing imports these" rather than reported as unused. The adapter's role
+// says this for a repository the adapters recognised; the path conventions
+// below keep the same answer for an older analysis with no stored roles.
+import type { Role } from "@/lib/roles";
+
+const ENTRY_ROLES: ReadonlySet<Role> = new Set<Role>([
+  "page-route",
+  "api-endpoint",
+  "server-action",
+  "controller",
+  "resolver",
+  "gateway",
+  "layout",
+  "route-ui",
+  "middleware",
+  "metadata",
+  "instrumentation",
+  "config",
+  "test",
+]);
+
 const CODE = /\.(?:[cm]?[jt]sx?)$/;
 
 const APP_FILES = new Set([
@@ -50,7 +69,17 @@ function withoutProjectPrefix(path: string): string {
   return projectPath;
 }
 
-export function isConventionEntry(path: string): boolean {
+export function isConventionEntry(file: {
+  path: string;
+  role: Role | null;
+}): boolean {
+  if (file.role !== null && ENTRY_ROLES.has(file.role)) {
+    return true;
+  }
+  return pathConvention(file.path);
+}
+
+function pathConvention(path: string): boolean {
   if (!CODE.test(path)) {
     return false;
   }

@@ -46,6 +46,44 @@ export async function storeResult(
     }
   }
 
+  // Roles arrive keyed by path, like routes: the database joins them to the
+  // files this run just stored and refuses the whole chunk if one misses.
+  const roles: Json[] = [];
+  for (const file of result.files) {
+    if (file.role !== null) {
+      roles.push({ path: file.path, role: file.role });
+    }
+  }
+
+  for (let index = 0; index < roles.length; index += FILE_CHUNK) {
+    const { error } = await db.rpc("insert_file_roles", {
+      p_analysis_id: analysis.id,
+      p_roles: roles.slice(index, index + FILE_CHUNK),
+    });
+    if (error) {
+      throw new Error(`Storing file roles failed: ${error.message}`);
+    }
+  }
+
+  const routes: Json[] = result.routes.map(
+    (route): Json => ({
+      file: route.path,
+      method: route.method,
+      pattern: route.pattern,
+      line: route.line,
+    }),
+  );
+
+  for (let index = 0; index < routes.length; index += FILE_CHUNK) {
+    const { error } = await db.rpc("insert_routes", {
+      p_analysis_id: analysis.id,
+      p_routes: routes.slice(index, index + FILE_CHUNK),
+    });
+    if (error) {
+      throw new Error(`Storing routes failed: ${error.message}`);
+    }
+  }
+
   // Ends are matched to stored files by path in the database, which refuses
   // the whole chunk if any edge doesn't match.
   const edges: Json[] = result.edges.map(
