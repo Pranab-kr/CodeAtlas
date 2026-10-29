@@ -60,6 +60,8 @@ export interface DependencyMapProps {
   selection: Selection;
   /** Whatever the pointer is over, here or in the pane. */
   hover: Selection;
+  /** The rail category being focused, if any. */
+  category: string | null;
   /** Changes whenever an open should refit the view to the new layout. */
   refit: number;
   onOpen(id: string): void;
@@ -84,6 +86,7 @@ function GraphCanvas({
   open,
   selection,
   hover,
+  category,
   refit,
   onOpen,
   onClose,
@@ -107,8 +110,8 @@ function GraphCanvas({
     [view],
   );
   const graph = useMemo(
-    () => buildFlowGraph({ view, boxes, selection }),
-    [view, boxes, selection],
+    () => buildFlowGraph({ view, boxes, selection, category }),
+    [view, boxes, selection, category],
   );
   const mapHover = useMemo<MapHover>(
     () => ({

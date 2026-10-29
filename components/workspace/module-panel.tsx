@@ -121,7 +121,10 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
             {data.label}
           </span>
           <span className="ml-auto shrink-0 text-[10.5px] leading-3 text-muted-foreground tabular-nums">
-            {data.fileCount} {data.fileCount === 1 ? "file" : "files"}
+            {data.matched !== null
+              ? `${data.matched}/${data.fileCount}`
+              : data.fileCount}{" "}
+            {data.fileCount === 1 ? "file" : "files"}
           </span>
           <span
             aria-hidden

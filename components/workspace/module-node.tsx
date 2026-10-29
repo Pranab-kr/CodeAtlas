@@ -64,7 +64,10 @@ export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
         </span>
         <span className="flex w-full items-center gap-2 text-[10.5px] leading-3 tabular-nums">
           <span className="shrink-0 text-muted-foreground">
-            {data.fileCount} {data.fileCount === 1 ? "file" : "files"}
+            {data.matched !== null
+              ? `${data.matched}/${data.fileCount}`
+              : data.fileCount}{" "}
+            {data.fileCount === 1 ? "file" : "files"}
           </span>
           <span
             className="ml-auto shrink-0 text-incoming"

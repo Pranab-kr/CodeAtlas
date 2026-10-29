@@ -36,6 +36,14 @@ export function kindToneOfPath(path: string): number | null {
   return kindTone(kindOfPath(path));
 }
 
+/** An empty selection means every type, so the pane's resting state is unfiltered. */
+export function matchesType(
+  path: string,
+  types: ReadonlySet<string>,
+): boolean {
+  return types.size === 0 || types.has(kindOfPath(path));
+}
+
 export interface KindCount {
   kind: string;
   count: number;

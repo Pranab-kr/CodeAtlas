@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { foldModules } from "@/lib/graph/fold";
+import type { Direction } from "@/lib/graph/reach";
 import type { Selection } from "@/lib/graph/selection";
 import {
   clampOffset,
@@ -55,6 +56,14 @@ export function AnalysisView({
   // Held here rather than in the pane so it outlives every change of
   // selection. Someone comparing explanations across files keeps their tab.
   const [tab, setTab] = useState<DetailTab>("structure");
+  // Likewise, so the same walk shows for each file while comparing them.
+  const [walk, setWalk] = useState<Direction | null>(null);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [category, setCategory] = useState<string | null>(null);
+  // Empty means every type. Held here so it survives switching selection.
+  const [types, setTypes] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
   // A folded node's only click opens it, so opening also selects the folder
   // the pane should describe.
@@ -94,6 +103,24 @@ export function AnalysisView({
   const selectFile = useCallback((path: string) => {
     setSelection({ kind: "file", path });
   }, []);
+
+  const toggleCategory = useCallback((key: string) => {
+    setCategory((previous) => (previous === key ? null : key));
+  }, []);
+
+  const toggleType = useCallback((kind: string) => {
+    setTypes((previous) => {
+      const next = new Set(previous);
+      if (next.has(kind)) {
+        next.delete(kind);
+      } else {
+        next.add(kind);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearTypes = useCallback(() => setTypes(new Set()), []);
 
   const scroll = useCallback((id: string, offset: number) => {
     setOpen((previous) => {
@@ -157,7 +184,13 @@ export function AnalysisView({
 
   return (
     <WorkspaceShell
-      rail={<CategoryRail categories={categories} />}
+      rail={
+        <CategoryRail
+          categories={categories}
+          active={category}
+          onToggle={toggleCategory}
+        />
+      }
       map={
         <DependencyMap
           edges={edges}
@@ -165,6 +198,7 @@ export function AnalysisView({
           open={open}
           selection={selection}
           hover={hover}
+          category={category}
           refit={refit}
           onOpen={openModule}
           onClose={closeModule}
@@ -182,8 +216,15 @@ export function AnalysisView({
           repository={repository}
           selection={selection}
           hover={hover}
+          types={types}
+          onToggleType={toggleType}
+          onClearTypes={clearTypes}
           tab={tab}
           onTab={setTab}
+          walk={walk}
+          onWalk={setWalk}
+          insightsOpen={insightsOpen}
+          onInsightsOpen={setInsightsOpen}
           onReveal={reveal}
           onHover={setHover}
         />
