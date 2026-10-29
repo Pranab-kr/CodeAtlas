@@ -21,21 +21,25 @@ import {
   useState,
 } from "react";
 
-import { foldModules } from "@/lib/graph/fold";
+import type { FoldResult } from "@/lib/graph/fold";
 import { boundsOf, layoutMap } from "@/lib/graph/layout";
+import type { Selection } from "@/lib/graph/selection";
 import { buildView } from "@/lib/graph/view";
-import type { ParsedEdge, ParsedFile } from "@/lib/parser/types";
+import type { ParsedEdge } from "@/lib/parser/types";
 import { cn } from "@/lib/utils";
-import { categoryToneMap } from "@/lib/workspace/categories";
 
 import {
   GraphActionsProvider,
   type GraphActions,
 } from "./graph-actions";
 import {
+  MapHoverProvider,
+  type MapHover,
+} from "./graph-hover";
+import {
   buildFlowGraph,
+  hoveredEndpoint,
   type FlowModuleNode,
-  type GraphFocus,
 } from "./graph-model";
 import { ModuleNode } from "./module-node";
 import { ModulePanel } from "./module-panel";
@@ -48,42 +52,48 @@ const MAX_ZOOM = 2;
 const INITIAL_MAX_ZOOM = 1.25;
 const FIT_PADDING = 0.06;
 
-export function DependencyMap({
-  files,
-  edges,
-  rootLabel,
-}: {
-  files: readonly ParsedFile[];
+export interface DependencyMapProps {
   edges: readonly ParsedEdge[];
-  rootLabel: string;
-}) {
+  fold: FoldResult;
+  /** Open modules and how far each has been scrolled. */
+  open: ReadonlyMap<string, number>;
+  selection: Selection;
+  /** Whatever the pointer is over, here or in the pane. */
+  hover: Selection;
+  /** Changes whenever an open should refit the view to the new layout. */
+  refit: number;
+  onOpen(id: string): void;
+  onClose(id: string): void;
+  onSelectFile(path: string): void;
+  onScroll(id: string, offset: number): void;
+  onHover(selection: Selection): void;
+  onDeselect(): void;
+}
+
+export function DependencyMap(props: DependencyMapProps) {
   return (
     <ReactFlowProvider>
-      <GraphCanvas files={files} edges={edges} rootLabel={rootLabel} />
+      <GraphCanvas {...props} />
     </ReactFlowProvider>
   );
 }
 
 function GraphCanvas({
-  files,
   edges,
-  rootLabel,
-}: {
-  files: readonly ParsedFile[];
-  edges: readonly ParsedEdge[];
-  rootLabel: string;
-}) {
-  const [open, setOpen] = useState<ReadonlyMap<string, number>>(
-    () => new Map(),
-  );
-  const [focus, setFocus] = useState<GraphFocus>(null);
-  const [refit, setRefit] = useState(0);
+  fold,
+  open,
+  selection,
+  hover,
+  refit,
+  onOpen,
+  onClose,
+  onSelectFile,
+  onScroll,
+  onHover,
+  onDeselect,
+}: DependencyMapProps) {
   const [ready, setReady] = useState(false);
 
-  const fold = useMemo(
-    () => foldModules(files, edges, { rootLabel }),
-    [files, edges, rootLabel],
-  );
   const expanded = useMemo(
     () => new Set<string>(open.keys()),
     [open],
@@ -96,10 +106,16 @@ function GraphCanvas({
     () => layoutMap(view.objects, view.edges),
     [view],
   );
-  const tones = useMemo(() => categoryToneMap(files), [files]);
   const graph = useMemo(
-    () => buildFlowGraph({ view, boxes, focus, tones }),
-    [view, boxes, focus, tones],
+    () => buildFlowGraph({ view, boxes, selection }),
+    [view, boxes, selection],
+  );
+  const mapHover = useMemo<MapHover>(
+    () => ({
+      selection: hover,
+      endpoint: hoveredEndpoint(view, hover),
+    }),
+    [view, hover],
   );
 
   const { getZoom, setViewport } = useReactFlow();
@@ -154,71 +170,22 @@ function GraphCanvas({
     );
   }, [viewportReady, refit, boxes, getZoom, setViewport, store]);
 
-  const openModule = useCallback((id: string) => {
-    setOpen((previous) => new Map(previous).set(id, 0));
-    setFocus({ kind: "node", id });
-    setRefit((count) => count + 1);
-  }, []);
-
-  const closeModule = useCallback(
-    (id: string) => {
-      setOpen((previous) => {
-        if (!previous.has(id)) {
-          return previous;
-        }
-        const next = new Map(previous);
-        next.delete(id);
-        return next;
-      });
-      setFocus((previous) => {
-        if (previous?.kind === "node" && previous.id === id) {
-          return previous;
-        }
-        if (previous?.kind === "file") {
-          const at = view.endpointOf.get(previous.path);
-          if (at?.object === id) {
-            return null;
-          }
-        }
-        return previous;
-      });
-    },
-    [view],
-  );
-
-  const scroll = useCallback((id: string, offset: number) => {
-    setOpen((previous) => {
-      if (!previous.has(id)) {
-        return previous;
-      }
-      const next = new Map(previous);
-      next.set(id, Math.max(0, offset));
-      return next;
-    });
-  }, []);
-
-  const selectFile = useCallback((path: string) => {
-    setFocus({ kind: "file", path });
-  }, []);
-
-  const clearSelection = useCallback(() => {
-    setFocus(null);
-  }, []);
-
   const actions = useMemo<GraphActions>(
     () => ({
-      openModule,
-      closeModule,
-      selectFile,
-      scroll,
-      clearSelection,
+      openModule: onOpen,
+      closeModule: onClose,
+      selectFile: onSelectFile,
+      scroll: onScroll,
+      clearSelection: onDeselect,
+      hover: onHover,
     }),
     [
-      openModule,
-      closeModule,
-      selectFile,
-      scroll,
-      clearSelection,
+      onOpen,
+      onClose,
+      onSelectFile,
+      onScroll,
+      onDeselect,
+      onHover,
     ],
   );
 
@@ -227,43 +194,45 @@ function GraphCanvas({
   const handleNodeClick: NodeMouseHandler<FlowModuleNode> = useCallback(
     (_event, node) => {
       if (node.type === "module") {
-        openModule(node.id);
+        onOpen(node.id);
       }
     },
-    [openModule],
+    [onOpen],
   );
 
   return (
     <GraphActionsProvider actions={actions}>
-      <ReactFlow<FlowModuleNode, Edge>
-        nodes={graph.nodes}
-        edges={graph.edges}
-        nodeTypes={nodeTypes}
-        onNodeClick={handleNodeClick}
-        onInit={fitInitial}
-        onPaneClick={clearSelection}
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        nodesFocusable={false}
-        edgesFocusable={false}
-        elementsSelectable={false}
-        elevateNodesOnSelect={false}
-        deleteKeyCode={null}
-        zoomOnDoubleClick={false}
-        className={cn(
-          "h-full w-full",
-          ready ? "opacity-100" : "opacity-0",
-        )}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={18}
-          size={1}
-          color="var(--border)"
-        />
-      </ReactFlow>
+      <MapHoverProvider hover={mapHover}>
+        <ReactFlow<FlowModuleNode, Edge>
+          nodes={graph.nodes}
+          edges={graph.edges}
+          nodeTypes={nodeTypes}
+          onNodeClick={handleNodeClick}
+          onInit={fitInitial}
+          onPaneClick={onDeselect}
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          nodesFocusable={false}
+          edgesFocusable={false}
+          elementsSelectable={false}
+          elevateNodesOnSelect={false}
+          deleteKeyCode={null}
+          zoomOnDoubleClick={false}
+          className={cn(
+            "h-full w-full",
+            ready ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={18}
+            size={1}
+            color="var(--border)"
+          />
+        </ReactFlow>
+      </MapHoverProvider>
     </GraphActionsProvider>
   );
 }

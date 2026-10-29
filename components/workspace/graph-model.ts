@@ -1,19 +1,16 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import type { Box } from "@/lib/graph/layout";
+import type { Selection } from "@/lib/graph/selection";
 import {
   ABOVE_HANDLE,
   BELOW_HANDLE,
   endpointKey,
+  type Endpoint,
   type MapView,
   type PanelObject,
 } from "@/lib/graph/view";
-import { categoryKeyOfPath } from "@/lib/workspace/categories";
-
-export type GraphFocus =
-  | { kind: "node"; id: string }
-  | { kind: "file"; path: string }
-  | null;
+import { kindToneOfPath } from "@/lib/workspace/kinds";
 
 export type ModuleNodeData = {
   label: string;
@@ -30,7 +27,7 @@ export type PanelRowData = {
   label: string;
   fanIn: number;
   fanOut: number;
-  tone: number;
+  tone: number | null;
   selected: boolean;
   dimmed: boolean;
 };
@@ -68,18 +65,21 @@ const INCOMING_EDGE = "var(--incoming)";
 const OUTGOING_EDGE = "var(--outgoing)";
 const DIM_EDGE_OPACITY = 0.15;
 
+/**
+ * What the canvas draws for a selection. Hover is deliberately not an input:
+ * it lives in context besides this, so moving the pointer never asks React
+ * Flow to diff a new node and edge list.
+ */
 export function buildFlowGraph({
   view,
   boxes,
-  focus,
-  tones,
+  selection,
 }: {
   view: MapView;
   boxes: ReadonlyMap<string, Box>;
-  focus: GraphFocus;
-  tones: ReadonlyMap<string, number>;
+  selection: Selection;
 }): { nodes: FlowModuleNode[]; edges: Edge[] } {
-  const highlight = highlightFor(view, focus);
+  const highlight = highlightFor(view, selection);
   const nodes = view.objects.map((object): FlowModuleNode => {
     const box = boxes.get(object.id);
     if (!box) {
@@ -92,29 +92,31 @@ export function buildFlowGraph({
         type: "module",
         position: { x: box.x, y: box.y },
         style: { width: box.width, height: box.height },
+        // The layout already knows the box. Handing it over as measured keeps
+        // React Flow from blanking edges while it re-measures a new node
+        // object after a selection change.
+        measured: { width: box.width, height: box.height },
         data: {
           label: object.label,
           directory: object.directory,
           fileCount: object.fileCount,
           fanIn: object.fanIn,
           fanOut: object.fanOut,
-          selected: focus?.kind === "node" && focus.id === object.id,
+          selected: selection?.kind === "node" && selection.id === object.id,
           dimmed:
             highlight !== null &&
             !highlight.objects.has(object.id) &&
-            !highlight.endpoints.has(
-              endpointKey(object.id, null),
-            ),
+            !highlight.endpoints.has(endpointKey(object.id, null)),
         },
         draggable: false,
         selectable: false,
         connectable: false,
         focusable: false,
-        zIndex: focus?.kind === "node" && focus.id === object.id ? 10 : 0,
+        zIndex: selection?.kind === "node" && selection.id === object.id ? 10 : 0,
       };
     }
 
-    return panelNode(object, box, focus, highlight, tones);
+    return panelNode(object, box, selection, highlight);
   });
 
   const dim: Edge[] = [];
@@ -166,14 +168,14 @@ export function buildFlowGraph({
 function panelNode(
   object: PanelObject,
   box: Box,
-  focus: GraphFocus,
+  selection: Selection,
   highlight: Highlight | null,
-  tones: ReadonlyMap<string, number>,
 ): PanelFlowNode {
-  const selected = focus?.kind === "node" && focus.id === object.id;
+  const selected = selection?.kind === "node" && selection.id === object.id;
   const whole = highlight === null || highlight.objects.has(object.id);
   const lit = (handle: string): boolean =>
-    whole || (highlight?.endpoints.has(endpointKey(object.id, handle)) ?? false);
+    whole ||
+    (highlight?.endpoints.has(endpointKey(object.id, handle)) ?? false);
   const anyLit =
     whole ||
     object.rows.some((row) => lit(row.path)) ||
@@ -185,6 +187,7 @@ function panelNode(
     type: "panel",
     position: { x: box.x, y: box.y },
     style: { width: box.width, height: box.height },
+    measured: { width: box.width, height: box.height },
     data: {
       label: object.label,
       directory: object.directory,
@@ -197,16 +200,18 @@ function panelNode(
       below: object.below,
       rows: object.rows.map((row) => {
         const rowSelected =
-          focus?.kind === "file" && focus.path === row.path;
+          selection?.kind === "file" && selection.path === row.path;
         return {
           path: row.path,
           label: row.label,
           fanIn: row.fanIn,
           fanOut: row.fanOut,
-          tone: tones.get(categoryKeyOfPath(row.path)) ?? 0,
+          tone: kindToneOfPath(row.path),
           selected: rowSelected,
           dimmed:
-            highlight !== null && !rowSelected && !lit(row.path),
+            highlight !== null &&
+            !rowSelected &&
+            !lit(row.path),
         };
       }),
       selected,
@@ -224,9 +229,9 @@ function panelNode(
 
 function highlightFor(
   view: MapView,
-  focus: GraphFocus,
+  selection: Selection,
 ): Highlight | null {
-  if (!focus) {
+  if (!selection) {
     return null;
   }
 
@@ -235,16 +240,16 @@ function highlightFor(
   const incoming = new Set<string>();
   const outgoing = new Set<string>();
 
-  if (focus.kind === "node") {
-    objects.add(focus.id);
+  if (selection.kind === "node") {
+    objects.add(selection.id);
     for (const edge of view.edges) {
-      if (edge.target === focus.id) {
+      if (edge.target === selection.id) {
         incoming.add(edge.id);
         endpoints.add(
           endpointKey(edge.source, edge.sourceHandle),
         );
       }
-      if (edge.source === focus.id) {
+      if (edge.source === selection.id) {
         outgoing.add(edge.id);
         endpoints.add(
           endpointKey(edge.target, edge.targetHandle),
@@ -254,7 +259,7 @@ function highlightFor(
     return { endpoints, objects, incoming, outgoing };
   }
 
-  const at = view.endpointOf.get(focus.path);
+  const at = view.endpointOf.get(selection.path);
   if (!at) {
     return null;
   }
@@ -262,7 +267,7 @@ function highlightFor(
   endpoints.add(self);
   // Neighbours come from the file edges rather than the drawn ones, so a
   // connection to a row inside the same panel still lights up.
-  for (const neighbor of view.neighborsOf.get(focus.path) ?? []) {
+  for (const neighbor of view.neighborsOf.get(selection.path) ?? []) {
     endpoints.add(neighbor);
   }
 
@@ -276,4 +281,21 @@ function highlightFor(
   }
 
   return { endpoints, objects, incoming, outgoing };
+}
+
+/**
+ * The one endpoint on the canvas that stands for a hovered file or folder: its
+ * row, the above/below row it's scrolled into, or the folded node holding it.
+ */
+export function hoveredEndpoint(
+  view: MapView,
+  hover: Selection,
+): Endpoint | null {
+  if (!hover) {
+    return null;
+  }
+  if (hover.kind === "node") {
+    return { object: hover.id, handle: null };
+  }
+  return view.endpointOf.get(hover.path) ?? null;
 }

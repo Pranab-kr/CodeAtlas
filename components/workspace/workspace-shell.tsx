@@ -29,7 +29,7 @@ export function WorkspaceShell({
       </section>
       <aside
         aria-label="Details"
-        className="min-h-0 overflow-hidden border-l border-border bg-muted/10"
+        className="min-h-0 overflow-y-auto overflow-x-hidden border-l border-border bg-muted/10"
       >
         {detail}
       </aside>

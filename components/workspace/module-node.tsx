@@ -7,6 +7,7 @@ import { PAD_X } from "@/lib/graph/layout";
 import { cn } from "@/lib/utils";
 
 import { useGraphActions } from "./graph-actions";
+import { useMapHover } from "./graph-hover";
 import type { ModuleFlowNode } from "./graph-model";
 
 // Handles are invisible anchors: an edge ends at the box, not at a dot.
@@ -21,13 +22,17 @@ const ANCHOR_STYLE: CSSProperties = {
 };
 
 export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
-  const { openModule } = useGraphActions();
+  const { openModule, hover } = useGraphActions();
+  const mapHover = useMapHover();
+  const hovered = mapHover.endpoint?.object === id;
 
   return (
     <div
+      onMouseEnter={() => hover({ kind: "node", id })}
+      onMouseLeave={() => hover(null)}
       className={cn(
         "nopan relative h-full w-full",
-        data.dimmed && "opacity-25",
+        data.dimmed && !hovered && "opacity-25",
       )}
     >
       <Handle
@@ -48,6 +53,8 @@ export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
           data.selected
             ? "border-selection bg-selection/[0.06]"
             : "border-border hover:border-foreground/50",
+          hovered &&
+            "shadow-[inset_0_0_0_1px_var(--selection)]",
           "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-selection",
         )}
         style={{ paddingInline: PAD_X }}
