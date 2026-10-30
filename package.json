@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "parse": "node scripts/parse-repo.mts"
+    "parse": "node scripts/parse-repo.mts",
+    "eval:paths": "node --import ./scripts/evals/register.mjs scripts/evals/invented-paths.mts",
+    "eval:roles": "node --import ./scripts/evals/register.mjs scripts/evals/role-accuracy.mts",
+    "eval:prompts": "node --import ./scripts/evals/register.mjs scripts/evals/prompt-versions.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

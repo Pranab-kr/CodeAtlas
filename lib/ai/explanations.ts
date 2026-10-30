@@ -8,6 +8,11 @@ import type { Repository } from "@/lib/pipeline/github";
 
 import { aiClient, aiModel } from "./client";
 import type { FileContext, FolderContext } from "./context";
+import {
+  fileAllowedPaths,
+  folderAllowedPaths,
+  inventedPaths,
+} from "./invented-paths";
 import { messageText } from "./message";
 import {
   buildFilePrompt,
@@ -18,7 +23,11 @@ import {
   folderSystemPrompt,
 } from "./prompts";
 import { fetchFileAt } from "./source";
-import { markCache } from "./trace";
+import {
+  markAllowedPaths,
+  markCache,
+  recordInventedPaths,
+} from "./trace";
 
 type Db = SupabaseClient<Database>;
 
@@ -79,7 +88,11 @@ export const explainFile = traceable(
       );
     }
 
+    const allowed = fileAllowedPaths(request.file, fetched.source);
+    markAllowedPaths(allowed);
+
     const body = await generateFile(request.file, fetched.source, model);
+    await recordInventedPaths(inventedPaths(body, allowed), allowed.length);
     const warning = await writeFileCache(request, model, body);
 
     return { body, cached: false, warning };
@@ -108,7 +121,11 @@ export const explainFolder = traceable(
       return { body: cached, cached: true, warning: null };
     }
 
+    const allowed = folderAllowedPaths(request.folder);
+    markAllowedPaths(allowed);
+
     const body = await generateFolder(request.folder, model);
+    await recordInventedPaths(inventedPaths(body, allowed), allowed.length);
     const warning = await writeFolderCache(request, model, body);
 
     return { body, cached: false, warning };

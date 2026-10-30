@@ -48,7 +48,10 @@ export function aiClient(): TracedOpenAI {
   const openai = new OpenAI({
     apiKey,
     baseURL: baseUrl,
-    timeout: 90_000,
+    // A free provider can take well over a minute on a long file. Timing out
+    // early makes the SDK retry, and the provider then rejects the retry as a
+    // duplicate while the first request is still running.
+    timeout: 180_000,
     maxRetries: 1,
     defaultHeaders: { "X-Title": "CodeAtlas" },
   });
