@@ -49,7 +49,7 @@ export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
         }}
         title={data.directory}
         className={cn(
-          "flex h-full w-full cursor-pointer flex-col justify-center gap-[2px] rounded-[4px] border bg-card text-left font-mono",
+          "flex h-full w-full cursor-pointer flex-col justify-center gap-[2px] rounded-md border bg-card text-left font-mono",
           data.selected
             ? "border-selection bg-selection/[0.06]"
             : "border-border hover:border-foreground/50",

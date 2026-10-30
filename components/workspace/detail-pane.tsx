@@ -338,7 +338,7 @@ export function DetailPane({
           type="button"
           onClick={() => onAsk(!askOpen)}
           className={cn(
-            "ml-auto rounded-[3px] border px-2 py-0.5 text-[10.5px]",
+            "ml-auto rounded-sm border px-2 py-0.5 text-[10.5px]",
             askOpen
               ? "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               : "border-selection bg-selection/15 text-foreground hover:bg-selection/20",
@@ -1067,7 +1067,7 @@ function WalkButton({
       aria-pressed={on}
       onClick={() => onWalk(on ? null : direction)}
       className={cn(
-        "rounded-[3px] border px-2 py-0.5 text-[11px]",
+        "rounded-sm border px-2 py-0.5 text-[11px]",
         on
           ? "border-selection bg-selection/15 text-foreground"
           : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -1291,7 +1291,7 @@ function KindSwatch({ kind }: { kind: string }) {
   return (
     <span
       aria-hidden
-      className="size-[8px] shrink-0 rounded-[2px]"
+      className="size-[8px] shrink-0 rounded-xs"
       style={{
         backgroundColor:
           tone === null

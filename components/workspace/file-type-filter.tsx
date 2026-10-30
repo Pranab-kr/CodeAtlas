@@ -59,7 +59,7 @@ export function FileTypeFilter({
                   count === 1 ? "file" : "files"
                 } in ${context}`}
                 className={cn(
-                  "flex h-5 items-center gap-1 rounded-[3px] border px-1.5 font-mono text-[10.5px] tabular-nums",
+                  "flex h-5 items-center gap-1 rounded-sm border px-1.5 font-mono text-[10.5px] tabular-nums",
                   on
                     ? "border-selection bg-selection/15 text-foreground"
                     : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground",
@@ -68,7 +68,7 @@ export function FileTypeFilter({
               >
                 <span
                   aria-hidden
-                  className="size-[7px] shrink-0 rounded-[2px]"
+                  className="size-[7px] shrink-0 rounded-xs"
                   style={{
                     backgroundColor:
                       tone === null

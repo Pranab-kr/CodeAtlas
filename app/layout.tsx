@@ -55,7 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 colorInput: "var(--background)",
                 colorInputForeground: "var(--foreground)",
                 colorBorder: "var(--border)",
-                borderRadius: "0px",
+                borderRadius: "var(--radius)",
               },
             }}
           >

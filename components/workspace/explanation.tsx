@@ -108,7 +108,7 @@ export function ExplanationPanel({
           onClick={() => onExplain(target)}
           disabled={busy}
           className={cn(
-            "rounded-[3px] border px-2 py-0.5",
+            "rounded-sm border px-2 py-0.5",
             "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             "disabled:cursor-default disabled:opacity-60",
           )}
@@ -506,7 +506,7 @@ function codeNode(
   return (
     <code
       key={key}
-      className="rounded-[2px] bg-muted px-1 py-px font-mono text-[10.5px] break-words [overflow-wrap:anywhere]"
+      className="rounded-xs bg-muted px-1 py-px font-mono text-[10.5px] break-words [overflow-wrap:anywhere]"
     >
       {stripMarkers(value)}
     </code>
@@ -544,7 +544,7 @@ function PathButton({
       }}
       onMouseEnter={() => linker.onHover(hover)}
       onMouseLeave={() => linker.onHover(null)}
-      className="-mx-0.5 max-w-full rounded-[2px] px-0.5 text-left font-mono break-words text-selection underline decoration-border underline-offset-2 [overflow-wrap:anywhere] hover:bg-selection/10 hover:decoration-selection"
+      className="-mx-0.5 max-w-full rounded-xs px-0.5 text-left font-mono break-words text-selection underline decoration-border underline-offset-2 [overflow-wrap:anywhere] hover:bg-selection/10 hover:decoration-selection"
     >
       {stripMarkers(label)}
     </button>

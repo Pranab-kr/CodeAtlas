@@ -91,7 +91,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
   return (
     <div
       className={cn(
-        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-[4px] border bg-card",
+        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-md border bg-card",
         data.selected ? "border-selection" : "border-border",
         data.dimmed && !panelHovered && "opacity-25",
       )}
@@ -210,7 +210,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
             >
               <span
                 aria-hidden
-                className="size-[8px] shrink-0 rounded-[2px]"
+                className="size-[8px] shrink-0 rounded-xs"
                 style={{
                   backgroundColor:
                     row.tone === null

@@ -50,7 +50,7 @@ export function CategoryRail({
               >
                 <span
                   aria-hidden
-                  className="size-[8px] shrink-0 rounded-[2px]"
+                  className="size-[8px] shrink-0 rounded-xs"
                   style={{
                     backgroundColor: `var(--kind-${categoryTone(index) + 1})`,
                   }}
