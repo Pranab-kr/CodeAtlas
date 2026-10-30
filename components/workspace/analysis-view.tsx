@@ -52,6 +52,7 @@ export function AnalysisView({
   analysisId,
   aiConfigured,
   tracingConfigured,
+  agentConfigured,
   repository,
   coverage,
   files,
@@ -62,6 +63,7 @@ export function AnalysisView({
   analysisId: string;
   aiConfigured: boolean;
   tracingConfigured: boolean;
+  agentConfigured: boolean;
   repository: RepositoryFacts;
   coverage: Coverage | null;
   files: readonly ParsedFile[];
@@ -99,6 +101,9 @@ export function AnalysisView({
   // Likewise, so the same walk shows for each file while comparing them.
   const [walk, setWalk] = useState<Direction | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  // Ask replaces the whole right pane. The selection is kept underneath, so
+  // toggling out returns to the file or folder that was already there.
+  const [askOpen, setAskOpen] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
   // The centre column shows the map or the route table; the rail and the pane
   // keep working on either.
@@ -394,6 +399,9 @@ export function AnalysisView({
           analysisId={analysisId}
           aiConfigured={aiConfigured}
           tracingConfigured={tracingConfigured}
+          askOpen={askOpen}
+          onAsk={setAskOpen}
+          agentConfigured={agentConfigured}
           explanations={explanations}
           onExplain={explain}
           onCheckStale={checkStale}

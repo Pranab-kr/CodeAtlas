@@ -38,6 +38,7 @@ import {
   matchesType,
 } from "@/lib/workspace/kinds";
 
+import { AskPanel } from "./ask-panel";
 import {
   ExplanationPanel,
   IDLE_EXPLANATION,
@@ -83,6 +84,10 @@ interface DetailPaneProps {
   analysisId: string;
   aiConfigured: boolean;
   tracingConfigured: boolean;
+  /** Ask is a mode of the whole pane, not a third tab. */
+  askOpen: boolean;
+  onAsk(open: boolean): void;
+  agentConfigured: boolean;
   explanations: ReadonlyMap<string, ExplanationState>;
   onExplain(target: ExplanationTarget): void;
   onCheckStale(target: ExplanationTarget): void;
@@ -116,6 +121,9 @@ export function DetailPane({
   analysisId,
   aiConfigured,
   tracingConfigured,
+  askOpen,
+  onAsk,
+  agentConfigured,
   explanations,
   onExplain,
   onCheckStale,
@@ -137,6 +145,24 @@ export function DetailPane({
   // One adjacency for whichever file is selected; the walk itself is
   // arithmetic over edges the browser already has.
   const graph = useMemo(() => adjacency(edges), [edges]);
+
+  // What Ask starts from. A folded folder is spoken about by its directory,
+  // not by the id the canvas uses.
+  const askContext = useMemo(() => {
+    if (selection === null) {
+      return null;
+    }
+    if (selection.kind === "file") {
+      return { kind: "file" as const, path: selection.path };
+    }
+    const group = fold.modules.find(
+      (entry) => entry.id === selection.id,
+    );
+    if (!group || group.directory === ".") {
+      return null;
+    }
+    return { kind: "folder" as const, path: group.directory };
+  }, [selection, fold]);
 
   // Whether a path is what the pointer is over, on the map or in here. A
   // hovered folder marks every file inside it.
@@ -303,15 +329,56 @@ export function DetailPane({
   }
 
   return (
-    <div>
-      <FileTypeFilter
-        counts={typeCounts}
-        context={typeContext.label}
-        active={types}
-        onToggle={onToggleType}
-        onClear={onClearTypes}
-      />
-      {content}
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
+        <span className="text-[10px] tracking-wide text-muted-foreground uppercase">
+          {askOpen ? "Ask" : "Details"}
+        </span>
+        <button
+          type="button"
+          onClick={() => onAsk(!askOpen)}
+          className={cn(
+            "ml-auto rounded-[3px] border px-2 py-0.5 text-[10.5px]",
+            askOpen
+              ? "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              : "border-selection bg-selection/15 text-foreground hover:bg-selection/20",
+          )}
+        >
+          {askOpen ? "Details" : "Ask"}
+        </button>
+      </div>
+      <div
+        className={cn(
+          "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
+          askOpen && "hidden",
+        )}
+      >
+        <FileTypeFilter
+          counts={typeCounts}
+          context={typeContext.label}
+          active={types}
+          onToggle={onToggleType}
+          onClear={onClearTypes}
+        />
+        {content}
+      </div>
+      <div
+        className={cn(
+          "min-h-0 w-full min-w-0 flex-1",
+          askOpen ? "flex" : "hidden",
+        )}
+      >
+        <AskPanel
+          analysisId={analysisId}
+          agentConfigured={agentConfigured}
+          context={askContext}
+          files={files}
+          folderIds={folderIds}
+          onReveal={onReveal}
+          onRevealFolder={onRevealFolder}
+          onHover={onHover}
+        />
+      </div>
     </div>
   );
 }

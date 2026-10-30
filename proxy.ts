@@ -6,10 +6,16 @@ import { env } from "@/lib/env";
 // evaluated at startup, not on the first request that needs it.
 const PUBLIC_PATHS = [env.clerkSignInUrl, env.clerkSignUpUrl];
 const START_PATH = "/start";
+// The agent's tools have no Clerk session. The route checks the database-
+// signed credential instead, and that credential names one analysis.
+const AGENT_TOOLS_PATH = "/api/agent/tools";
 
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  return (
+    pathname === AGENT_TOOLS_PATH ||
+    PUBLIC_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    )
   );
 }
 

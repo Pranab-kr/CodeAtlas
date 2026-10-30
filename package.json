@@ -11,7 +11,8 @@
     "parse": "node scripts/parse-repo.mts",
     "eval:paths": "node --import ./scripts/evals/register.mjs scripts/evals/invented-paths.mts",
     "eval:roles": "node --import ./scripts/evals/register.mjs scripts/evals/role-accuracy.mts",
-    "eval:prompts": "node --import ./scripts/evals/register.mjs scripts/evals/prompt-versions.mts"
+    "eval:prompts": "node --import ./scripts/evals/register.mjs scripts/evals/prompt-versions.mts",
+    "eval:agent": "node --import ./scripts/evals/register.mjs scripts/evals/agent.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

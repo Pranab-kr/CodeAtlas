@@ -43,6 +43,18 @@
       "skillPath": "config/skills/langsmith-trace/SKILL.md",
       "computedHash": "b450dadea70507f0405c33b8171ee927b221f679e0e9f650d49176e512084cfa"
     },
+    "migrate-radix-to-base": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "skillPath": "skills/migrate-radix-to-base/SKILL.md",
+      "computedHash": "e1f2030ee5059be3dff0812ca0e4b995ee9fa3132176f049ebe6c90346a6755e"
+    },
+    "shadcn": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "b864a958765563321f485a96f4d59c0bb6539f4286ab6d8b8b66895b7ebd302d"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",

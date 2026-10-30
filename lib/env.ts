@@ -15,6 +15,11 @@ const aiBaseUrl = optional("AI_BASE_URL");
 const aiApiKey = optional("AI_API_KEY");
 const aiModel = optional("AI_MODEL");
 const langsmithApiKey = optional("LANGSMITH_API_KEY");
+// The agent is a separate service. Like AI, an absent URL is a supported
+// state: the pane says Ask isn't configured and the rest of the map works.
+const agentUrl = optional("AGENT_URL");
+const agentAssistantId = optional("AGENT_ASSISTANT_ID");
+const agentApiKey = optional("AGENT_API_KEY");
 
 // A deliberately missing key is a supported state: the map still works, and
 // the explanation pane says why it can't explain yet.
@@ -32,6 +37,10 @@ export const env = {
   aiModel,
   aiConfigured:
     aiBaseUrl !== null && aiApiKey !== null && aiModel !== null,
+  agentUrl,
+  agentAssistantId,
+  agentApiKey,
+  agentConfigured: agentUrl !== null && agentAssistantId !== null,
   // Tracing is only on when both halves are present. The SDK reads these from
   // the environment itself; this copy exists so the interface can say the
   // state out loud.

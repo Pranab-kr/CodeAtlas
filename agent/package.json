@@ -1,0 +1,27 @@
+{
+  "name": "code-atlas-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The CodeAtlas repository agent, built on Managed Deep Agents.",
+  "scripts": {
+    "dev": "mda dev . --hostname 127.0.0.1",
+    "deploy": "mda deploy .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@langchain/core": "1.3.2",
+    "langchain": "1.5.16",
+    "managed-deepagents": "0.10.0",
+    "zod": "^4.6.7",
+    "@langchain/openai": "1.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@langchain/core": "1.3.2",
+    "langchain": "1.5.16"
+  }
+}

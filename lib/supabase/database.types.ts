@@ -377,6 +377,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      agent_mint_credential: {
+        Args: { p_analysis_id: string }
+        Returns: string
+      }
+      agent_mint_credential_for_service: {
+        Args: { p_analysis_id: string }
+        Returns: string
+      }
+      agent_read_analysis: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       insert_edges: {
         Args: { p_analysis_id: string; p_edges: Json }
         Returns: number

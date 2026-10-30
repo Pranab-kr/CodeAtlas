@@ -1,8 +1,16 @@
+"use client";
+
 import type { ReactNode } from "react";
 
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+
 /**
- * The three columns are fixed here. Later phases fill the slots; they do not
- * rearrange them.
+ * The three columns stay in this order. The rail and the detail pane are
+ * resizable, because how much room an answer needs is a per-question thing.
  */
 export function WorkspaceShell({
   rail,
@@ -14,25 +22,50 @@ export function WorkspaceShell({
   detail: ReactNode;
 }) {
   return (
-    <div className="grid h-full min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem] overflow-hidden">
-      <nav
-        aria-label="Categories"
-        className="min-h-0 overflow-y-auto border-r border-border bg-muted/20"
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="h-full min-h-0 overflow-hidden"
+    >
+      <ResizablePanel
+        defaultSize="15%"
+        minSize="10%"
+        maxSize="30%"
+        className="h-full min-h-0"
       >
-        {rail}
-      </nav>
-      <section
-        aria-label="Map"
-        className="relative min-h-0 min-w-0 overflow-hidden bg-background"
+        <nav
+          aria-label="Categories"
+          className="h-full min-h-0 min-w-0 overflow-y-auto bg-muted/20"
+        >
+          {rail}
+        </nav>
+      </ResizablePanel>
+
+      <ResizableHandle withHandle />
+
+      <ResizablePanel minSize="35%" className="h-full min-h-0">
+        <section
+          aria-label="Map"
+          className="relative h-full min-h-0 min-w-0 overflow-hidden bg-background"
+        >
+          {map}
+        </section>
+      </ResizablePanel>
+
+      <ResizableHandle withHandle />
+
+      <ResizablePanel
+        defaultSize="30%"
+        minSize="24%"
+        maxSize="55%"
+        className="h-full min-h-0"
       >
-        {map}
-      </section>
-      <aside
-        aria-label="Details"
-        className="min-h-0 overflow-y-auto overflow-x-hidden border-l border-border bg-muted/10"
-      >
-        {detail}
-      </aside>
-    </div>
+        <aside
+          aria-label="Details"
+          className="h-full min-h-0 min-w-0 overflow-hidden bg-muted/10"
+        >
+          {detail}
+        </aside>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }

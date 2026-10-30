@@ -138,6 +138,7 @@ async function AnalysisBody({ params }: Parameter) {
               analysisId={analysis.id}
               aiConfigured={env.aiConfigured}
               tracingConfigured={env.tracingConfigured}
+              agentConfigured={env.agentConfigured}
               repository={{
                 name: project.name,
                 framework: analysis.framework ?? "none",

@@ -20,6 +20,30 @@ export interface StoredMap {
   routes: ParsedRoute[];
 }
 
+export interface StoredFileRow {
+  id: string;
+  path: string;
+  folder: string;
+  lines: number;
+  content_hash: string;
+  exports: string[] | null;
+}
+
+export interface StoredEdgeRow {
+  source_file_id: string;
+  target_file_id: string;
+  kind: string;
+  specifier: string;
+  line: number;
+}
+
+export interface StoredRouteRow {
+  file_id: string;
+  method: string;
+  path: string;
+  line: number;
+}
+
 // Supabase's PostgREST row limit is 1000, so every list is paged.
 const PAGE = 1000;
 
@@ -44,6 +68,20 @@ export async function loadMap(
   const edgeRows = await readEdges(db, analysisId);
   const routeRows = await readRoutes(db, analysisId);
 
+  return buildStoredMap(fileRows, roleRows, edgeRows, routeRows);
+}
+
+/**
+ * The stored rows as the parser contract. The agent's read path arrives as
+ * one JSON document instead of paged queries, and a script can hand in rows
+ * directly; all three go through this, so the map cannot mean two things.
+ */
+export function buildStoredMap(
+  fileRows: readonly StoredFileRow[],
+  roleRows: ReadonlyMap<string, Role>,
+  edgeRows: readonly StoredEdgeRow[],
+  routeRows: readonly StoredRouteRow[],
+): StoredMap {
   const pathById = new Map(fileRows.map((row) => [row.id, row.path]));
 
   const edges: ParsedEdge[] = edgeRows.map((row) => {
@@ -102,15 +140,11 @@ export async function loadMap(
   return { files, edges, routes };
 }
 
-async function readFiles(db: Db, analysisId: string) {
-  const rows: {
-    id: string;
-    path: string;
-    folder: string;
-    lines: number;
-    content_hash: string;
-    exports: string[] | null;
-  }[] = [];
+async function readFiles(
+  db: Db,
+  analysisId: string,
+): Promise<StoredFileRow[]> {
+  const rows: StoredFileRow[] = [];
 
   for (let from = 0; ; ) {
     const { data, error } = await db
@@ -167,14 +201,11 @@ async function readRoles(db: Db, analysisId: string): Promise<Map<string, Role>>
   );
 }
 
-async function readEdges(db: Db, analysisId: string) {
-  const rows: {
-    source_file_id: string;
-    target_file_id: string;
-    kind: string;
-    specifier: string;
-    line: number;
-  }[] = [];
+async function readEdges(
+  db: Db,
+  analysisId: string,
+): Promise<StoredEdgeRow[]> {
+  const rows: StoredEdgeRow[] = [];
 
   for (let from = 0; ; ) {
     const { data, error } = await db
@@ -196,13 +227,11 @@ async function readEdges(db: Db, analysisId: string) {
   }
 }
 
-async function readRoutes(db: Db, analysisId: string) {
-  const rows: {
-    file_id: string;
-    method: string;
-    path: string;
-    line: number;
-  }[] = [];
+async function readRoutes(
+  db: Db,
+  analysisId: string,
+): Promise<StoredRouteRow[]> {
+  const rows: StoredRouteRow[] = [];
 
   for (let from = 0; ; ) {
     const { data, error } = await db

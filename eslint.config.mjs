@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The agent is its own Managed Deep Agents project with its own toolchain.
+    "agent/**",
   ]),
 ]);
 

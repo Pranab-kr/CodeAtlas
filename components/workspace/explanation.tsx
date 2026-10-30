@@ -237,7 +237,7 @@ type Block =
   | { kind: "paragraph"; text: string }
   | { kind: "bullets"; items: string[] };
 
-function ExplanationBody({
+export function ExplanationBody({
   body,
   filePaths,
   folderIds,
@@ -262,16 +262,19 @@ function ExplanationBody({
   const blocks = parseBlocks(body);
 
   return (
-    <div className="mt-2 space-y-2 break-words">
+    <div className="mt-2 min-w-0 space-y-2 break-words [overflow-wrap:anywhere]">
       {blocks.map((block, index) =>
         block.kind === "paragraph" ? (
-          <p key={index} className="leading-[1.45]">
+          <p key={index} className="min-w-0 leading-[1.45] break-words">
             {inline(block.text, linker, `p-${index}`)}
           </p>
         ) : (
-          <ul key={index} className="list-disc space-y-1 pl-4">
+          <ul key={index} className="min-w-0 list-disc space-y-1 pl-4">
             {block.items.map((item, itemIndex) => (
-              <li key={itemIndex} className="leading-[1.45]">
+              <li
+                key={itemIndex}
+                className="min-w-0 leading-[1.45] break-words"
+              >
                 {inline(item, linker, `b-${index}-${itemIndex}`)}
               </li>
             ))}
@@ -503,7 +506,7 @@ function codeNode(
   return (
     <code
       key={key}
-      className="rounded-[2px] bg-muted px-1 py-px font-mono text-[10.5px]"
+      className="rounded-[2px] bg-muted px-1 py-px font-mono text-[10.5px] break-words [overflow-wrap:anywhere]"
     >
       {stripMarkers(value)}
     </code>
@@ -541,7 +544,7 @@ function PathButton({
       }}
       onMouseEnter={() => linker.onHover(hover)}
       onMouseLeave={() => linker.onHover(null)}
-      className="-mx-0.5 rounded-[2px] px-0.5 font-mono text-selection underline decoration-border underline-offset-2 hover:bg-selection/10 hover:decoration-selection"
+      className="-mx-0.5 max-w-full rounded-[2px] px-0.5 text-left font-mono break-words text-selection underline decoration-border underline-offset-2 [overflow-wrap:anywhere] hover:bg-selection/10 hover:decoration-selection"
     >
       {stripMarkers(label)}
     </button>
