@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function ActivateWorkspace({
   organizationId,
+  next,
 }: {
   organizationId: string;
+  next: string;
 }) {
   const { isLoaded, setActive } = useOrganizationList();
   const started = useRef(false);
@@ -23,12 +25,12 @@ export function ActivateWorkspace({
 
     void setActive({ organization: organizationId })
       .then(() => {
-        window.location.replace("/");
+        window.location.replace(next);
       })
       .catch(() => {
         setFailed(true);
       });
-  }, [isLoaded, organizationId, setActive]);
+  }, [isLoaded, organizationId, next, setActive]);
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">

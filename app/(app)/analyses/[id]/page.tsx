@@ -221,9 +221,8 @@ function AnalysisBar({
     <header className="flex h-9 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
       {/* Full navigation: a live progress channel can update while a
           client-side navigation is processing the Flight stream. */}
-      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a
-        href="/"
+        href="/dashboard"
         className="text-[11px] text-muted-foreground hover:underline"
       >
         Analyses
@@ -262,9 +261,8 @@ function AnalysisHeading({
   return (
     <header>
       <div className="flex items-baseline gap-2">
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
-          href="/"
+          href="/dashboard"
           className="text-[11px] text-muted-foreground hover:underline"
         >
           Analyses

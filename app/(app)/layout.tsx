@@ -21,8 +21,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex h-dvh flex-col overflow-hidden">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
         {/* Full navigation: the dashboard can hold live analysis channels. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/" className="text-[13px] font-medium tracking-tight">
+        <a href="/dashboard" className="text-[13px] font-medium tracking-tight">
           CodeAtlas
         </a>
         <Separator orientation="vertical" className="h-4" />
@@ -33,8 +32,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <OrganizationSwitcher
             hidePersonal
             skipInvitationScreen
-            afterSelectOrganizationUrl="/"
-            afterCreateOrganizationUrl="/"
+            afterSelectOrganizationUrl="/dashboard"
+            afterCreateOrganizationUrl="/dashboard"
           />
           <ModeToggle />
           <UserButton />

@@ -35,14 +35,26 @@ export async function submitAnalysis(
   _previous: RunState,
   form: FormData,
 ): Promise<RunState> {
-  const { orgId } = await auth();
-  if (!orgId) {
-    return { ...NOT_STARTED, error: "No active organization" };
-  }
-
   const value = form.get("url");
   if (typeof value !== "string" || value.trim() === "") {
     return { ...NOT_STARTED, error: "Paste a GitHub repository URL" };
+  }
+
+  return startRepositoryAnalysis(value);
+}
+
+/**
+ * Shared by the dashboard form and the landing page's hand-off route. Returns
+ * where the client should navigate; it never redirects, because a live
+ * progress update landing during a server-action redirect corrupts the Flight
+ * client in Next 16.
+ */
+export async function startRepositoryAnalysis(
+  value: string,
+): Promise<RunState> {
+  const { orgId } = await auth();
+  if (!orgId) {
+    return { ...NOT_STARTED, error: "No active organization" };
   }
 
   let repository: Repository;

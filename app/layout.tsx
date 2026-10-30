@@ -41,8 +41,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             publishableKey={env.clerkPublishableKey}
             signInUrl={env.clerkSignInUrl}
             signUpUrl={env.clerkSignUpUrl}
-            signInFallbackRedirectUrl="/"
-            signUpFallbackRedirectUrl="/"
+            signInFallbackRedirectUrl="/dashboard"
+            signUpFallbackRedirectUrl="/dashboard"
             afterSignOutUrl="/sign-in"
             appearance={{
               variables: {

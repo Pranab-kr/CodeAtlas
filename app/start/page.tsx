@@ -1,8 +1,24 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { nextPath } from "@/lib/navigation";
 import { ActivateWorkspace } from "./activate-workspace";
+import StartLoading from "./loading";
 
-export default async function StartPage() {
+interface Parameter {
+  searchParams: Promise<{ next?: string | string[] }>;
+}
+
+export default function StartPage({ searchParams }: Parameter) {
+  return (
+    <Suspense fallback={<StartLoading />}>
+      <StartBody searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function StartBody({ searchParams }: Parameter) {
+  const next = nextPath((await searchParams).next);
   const { userId, orgId } = await auth();
 
   if (!userId) {
@@ -10,7 +26,7 @@ export default async function StartPage() {
   }
 
   if (orgId) {
-    redirect("/");
+    redirect(next);
   }
 
   const clerk = await clerkClient();
@@ -33,5 +49,7 @@ export default async function StartPage() {
     organizationId = organization.id;
   }
 
-  return <ActivateWorkspace organizationId={organizationId} />;
+  return (
+    <ActivateWorkspace organizationId={organizationId} next={next} />
+  );
 }

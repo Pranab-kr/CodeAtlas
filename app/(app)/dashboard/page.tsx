@@ -169,7 +169,7 @@ function progressOf(row: {
   };
 }
 
-export default function Home() {
+export default function DashboardPage() {
   return (
     <section className="h-full overflow-auto">
       <div className="mx-auto w-full max-w-5xl px-4 py-5">
