@@ -1,5 +1,6 @@
 "use client";
 
+import { GitBranch, Loader2 } from "lucide-react";
 import { useActionState, useEffect } from "react";
 
 import { submitAnalysis, type RunState } from "@/app/(app)/actions";
@@ -23,18 +24,31 @@ export function SubmitForm() {
 
   return (
     <form action={action} className="mt-4 flex flex-wrap items-center gap-2">
-      <Input
-        name="url"
-        required
-        autoComplete="off"
-        spellCheck={false}
-        aria-label="Public GitHub repository URL"
-        aria-invalid={state.error ? true : undefined}
-        placeholder="github.com/owner/repo"
-        className="h-7 w-80 max-w-full font-mono text-[11.5px]"
-      />
+      <div className="flex h-8 w-[24rem] max-w-full items-center gap-1 rounded-md border border-input bg-card px-1 transition-[border-color,box-shadow] duration-150 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/40 has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-1 has-[[aria-invalid=true]]:ring-destructive/20">
+        <GitBranch
+          aria-hidden="true"
+          className="ml-1 size-3.5 shrink-0 text-muted-foreground"
+        />
+        <Input
+          name="url"
+          required
+          autoComplete="off"
+          spellCheck={false}
+          aria-label="Public GitHub repository URL"
+          aria-invalid={state.error ? true : undefined}
+          placeholder="github.com/owner/repo"
+          className="h-7 min-w-0 flex-1 border-0 bg-transparent px-1 font-mono text-[11.5px] shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 dark:bg-transparent"
+        />
+      </div>
       <Button type="submit" size="sm" disabled={pending}>
-        {pending ? "Starting…" : "Analyse"}
+        {pending ? (
+          <>
+            <Loader2 className="animate-spin" />
+            Starting
+          </>
+        ) : (
+          "Analyse"
+        )}
       </Button>
       {state.error ? (
         <p

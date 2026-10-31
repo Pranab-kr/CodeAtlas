@@ -29,7 +29,7 @@ export function StatusBadge({ status }: { status: ShownStatus }) {
       variant="outline"
       className={`h-4 gap-1.5 px-1.5 font-mono text-[10.5px] font-normal ${style.text}`}
     >
-      <span aria-hidden className={`size-1.5 rounded-full ${style.dot}`} />
+      <span aria-hidden className={`size-1.5 rounded-full ${style.dot} ${status === "running" ? "atlas-live" : ""}`} />
       {LABELS[status]}
     </Badge>
   );

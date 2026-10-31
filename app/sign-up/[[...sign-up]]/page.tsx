@@ -1,15 +1,17 @@
 import { SignUp } from "@clerk/nextjs";
 import { Suspense } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
+
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <AuthShell mode="sign-up">
       <Suspense>
         <SignUp
           fallbackRedirectUrl="/dashboard"
           signInFallbackRedirectUrl="/dashboard"
         />
       </Suspense>
-    </div>
+    </AuthShell>
   );
 }

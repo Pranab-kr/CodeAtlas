@@ -31,7 +31,7 @@ export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
       onMouseEnter={() => hover({ kind: "node", id })}
       onMouseLeave={() => hover(null)}
       className={cn(
-        "nopan relative h-full w-full",
+        "nopan relative h-full w-full transition-opacity duration-150",
         data.dimmed && !hovered && "opacity-25",
       )}
     >
@@ -49,7 +49,7 @@ export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
         }}
         title={data.directory}
         className={cn(
-          "flex h-full w-full cursor-pointer flex-col justify-center gap-[2px] rounded-md border bg-card text-left font-mono",
+          "flex h-full w-full cursor-pointer flex-col justify-center gap-[2px] rounded-md border bg-card text-left font-mono transition-colors duration-150",
           data.selected
             ? "border-selection bg-selection/[0.06]"
             : "border-border hover:border-foreground/50",

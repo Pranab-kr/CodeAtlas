@@ -91,7 +91,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
   return (
     <div
       className={cn(
-        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-md border bg-card",
+        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-md border bg-card transition-opacity duration-150",
         data.selected ? "border-selection" : "border-border",
         data.dimmed && !panelHovered && "opacity-25",
       )}
@@ -107,7 +107,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
         title={`${data.directory} — click to fold`}
         style={HEADER_STYLE}
         className={cn(
-          "flex shrink-0 cursor-pointer flex-col justify-center gap-[2px] border-b border-border text-left",
+          "flex shrink-0 cursor-pointer flex-col justify-center gap-[2px] border-b border-border text-left transition-colors duration-150",
           data.selected
             ? "bg-selection/[0.06] hover:bg-selection/10"
             : "bg-muted/30 hover:bg-muted/50",
@@ -198,7 +198,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
               title={row.path}
               style={ROW_STYLE}
               className={cn(
-                "flex size-full cursor-pointer items-center gap-[6px] text-left text-[11.5px]",
+                "flex size-full cursor-pointer items-center gap-[6px] text-left text-[11.5px] transition-colors duration-150",
                 row.selected
                   ? "bg-selection/10 text-foreground shadow-[inset_2px_0_0_var(--selection)]"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -305,7 +305,7 @@ function OffscreenRow({
         disabled={count === 0}
         style={ROW_STYLE}
         className={cn(
-          "flex size-full items-center text-left font-mono text-[10.5px] tabular-nums",
+          "flex size-full items-center text-left font-mono text-[10.5px] tabular-nums transition-colors duration-150",
           "text-muted-foreground enabled:hover:bg-muted/50 enabled:hover:text-foreground disabled:opacity-50",
           hovered &&
             "shadow-[inset_0_0_0_1px_var(--selection)]",

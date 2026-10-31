@@ -330,22 +330,19 @@ export function DetailPane({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
-        <span className="text-[10px] tracking-wide text-muted-foreground uppercase">
-          {askOpen ? "Ask" : "Details"}
-        </span>
-        <button
-          type="button"
-          onClick={() => onAsk(!askOpen)}
-          className={cn(
-            "ml-auto rounded-sm border px-2 py-0.5 text-[10.5px]",
-            askOpen
-              ? "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              : "border-selection bg-selection/15 text-foreground hover:bg-selection/20",
-          )}
+      <div className="flex h-8 shrink-0 items-center border-b border-border bg-card px-2">
+        <div
+          role="group"
+          aria-label="Detail pane"
+          className="flex items-center rounded-sm border border-border p-0.5"
         >
-          {askOpen ? "Details" : "Ask"}
-        </button>
+          <PaneTab
+            label="Details"
+            on={!askOpen}
+            onClick={() => onAsk(false)}
+          />
+          <PaneTab label="Ask" on={askOpen} onClick={() => onAsk(true)} />
+        </div>
       </div>
       <div
         className={cn(
@@ -1325,7 +1322,7 @@ function PathRow({
         onMouseEnter={() => paths.onHover({ kind: "file", path })}
         onMouseLeave={() => paths.onHover(null)}
         className={cn(
-          "flex h-[22px] w-full min-w-0 items-center gap-2 px-3 text-left text-[11px]",
+          "flex h-[22px] w-full min-w-0 items-center gap-2 px-3 text-left text-[11px] transition-colors",
           hovered
             ? "bg-selection/15 shadow-[inset_2px_0_0_var(--selection)]"
             : "hover:bg-muted/50",
@@ -1351,4 +1348,30 @@ function PathRow({
 
 function folderLabel(directory: string): string {
   return directory === "." ? "(root)" : `${directory}/`;
+}
+
+function PaneTab({
+  label,
+  on,
+  onClick,
+}: {
+  label: string;
+  on: boolean;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "h-5 rounded-[3px] px-2 text-[10.5px] transition-colors",
+        on
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
 }

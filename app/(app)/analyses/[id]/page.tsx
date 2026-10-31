@@ -9,6 +9,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AnalysisView } from "@/components/workspace/analysis-view";
 import { readCoverage } from "@/lib/analysis/coverage";
@@ -96,6 +97,7 @@ async function AnalysisBody({ params }: Parameter) {
             name={project.name}
             url={project.repository_url}
             commit={analysis.commit_sha}
+            framework={analysis.framework}
             analysisId={analysis.id}
             rerun={false}
           />
@@ -121,6 +123,7 @@ async function AnalysisBody({ params }: Parameter) {
           name={project.name}
           url={project.repository_url}
           commit={analysis.commit_sha}
+          framework={analysis.framework}
           analysisId={analysis.id}
           rerun
         />
@@ -166,6 +169,7 @@ async function AnalysisBody({ params }: Parameter) {
             name={project.name}
             url={project.repository_url}
             commit={analysis.commit_sha}
+            framework={analysis.framework}
           />
           <div className="mt-6 border border-destructive/30 bg-destructive/5 px-3 py-2">
             <div className="flex items-center gap-2">
@@ -193,6 +197,7 @@ async function AnalysisBody({ params }: Parameter) {
           name={project.name}
           url={project.repository_url}
           commit={analysis.commit_sha}
+          framework={analysis.framework}
         />
         <ProgressView
           analysisId={analysis.id}
@@ -208,12 +213,14 @@ function AnalysisBar({
   name,
   url,
   commit,
+  framework,
   analysisId,
   rerun,
 }: {
   name: string;
   url: string;
   commit: string | null;
+  framework: string | null;
   analysisId: string;
   rerun: boolean;
 }) {
@@ -234,9 +241,17 @@ function AnalysisBar({
       >
         {name}
       </span>
+      {framework && framework !== "none" ? (
+        <Badge
+          variant="outline"
+          className="h-4 shrink-0 px-1.5 font-mono text-[10px] font-normal text-muted-foreground"
+        >
+          {framework}
+        </Badge>
+      ) : null}
       {commit ? (
         <span
-          className="font-mono text-[10.5px] text-muted-foreground"
+          className="shrink-0 rounded-sm border border-border px-1 py-px font-mono text-[10px] leading-none text-muted-foreground"
           title={commit}
         >
           {commit.slice(0, 7)}
@@ -253,14 +268,16 @@ function AnalysisHeading({
   name,
   url,
   commit,
+  framework,
 }: {
   name: string;
   url: string;
   commit: string | null;
+  framework: string | null;
 }) {
   return (
     <header>
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-center gap-2">
         <a
           href="/dashboard"
           className="text-[11px] text-muted-foreground hover:underline"
@@ -271,9 +288,17 @@ function AnalysisHeading({
           /
         </span>
         <h1 className="truncate font-mono text-[13px]">{name}</h1>
+        {framework && framework !== "none" ? (
+          <Badge
+            variant="outline"
+            className="h-4 shrink-0 px-1.5 font-mono text-[10px] font-normal text-muted-foreground"
+          >
+            {framework}
+          </Badge>
+        ) : null}
         {commit ? (
           <span
-            className="font-mono text-[10.5px] text-muted-foreground"
+            className="shrink-0 rounded-sm border border-border px-1 py-px font-mono text-[10px] leading-none text-muted-foreground"
             title={commit}
           >
             {commit.slice(0, 7)}

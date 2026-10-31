@@ -1,5 +1,6 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { Suspense, type ReactNode } from "react";
+import { AtlasMark } from "@/components/brand/mark";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Separator } from "@/components/ui/separator";
 import { requireActiveOrganization } from "@/lib/active-org";
@@ -21,7 +22,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex h-dvh flex-col overflow-hidden">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
         {/* Full navigation: the dashboard can hold live analysis channels. */}
-        <a href="/dashboard" className="text-[13px] font-medium tracking-tight">
+        <a
+          href="/dashboard"
+          className="flex items-center gap-2 text-[13px] font-medium tracking-tight"
+        >
+          <AtlasMark className="size-[16px]" />
           CodeAtlas
         </a>
         <Separator orientation="vertical" className="h-4" />
