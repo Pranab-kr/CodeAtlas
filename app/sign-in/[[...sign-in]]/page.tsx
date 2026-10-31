@@ -1,15 +1,17 @@
 import { SignIn } from "@clerk/nextjs";
 import { Suspense } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
+
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <AuthShell mode="sign-in">
       <Suspense>
         <SignIn
           fallbackRedirectUrl="/dashboard"
           signUpFallbackRedirectUrl="/dashboard"
         />
       </Suspense>
-    </div>
+    </AuthShell>
   );
 }

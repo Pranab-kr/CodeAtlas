@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AnalysisRow } from "@/components/analyses/analysis-row";
 import { SubmitForm } from "@/components/analyses/submit-form";
+import { AtlasMark } from "@/components/brand/mark";
 import {
   Alert,
   AlertDescription,
@@ -44,12 +45,15 @@ function AnalysesEmpty() {
         </CardTitle>
       </CardHeader>
       <Separator />
-      <CardContent className="px-3 py-10">
-        <p className="text-[12px]">No analyses in this workspace yet.</p>
-        <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
-          Paste a public repository above to map it. Everyone in this
-          workspace will see the result.
-        </p>
+      <CardContent className="flex flex-col items-start gap-3 px-3 py-10">
+        <AtlasMark className="size-6 text-muted-foreground" />
+        <div>
+          <p className="text-[12px]">No analyses in this workspace yet.</p>
+          <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
+            Paste a public repository above to map it. Everyone in this
+            workspace will see the result.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

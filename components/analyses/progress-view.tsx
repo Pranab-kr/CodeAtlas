@@ -97,6 +97,21 @@ export function ProgressView({
     wasFinished.current = finished;
   }, [finished]);
 
+  // How far down the fixed stage list the run has got. A failed run stops at
+  // the stage it failed on rather than claiming that stage finished.
+  const currentIndex = STAGES.findIndex(
+    (entry) => entry.stage === progress.stage,
+  );
+  const reached =
+    progress.status === "succeeded"
+      ? STAGES.length
+      : currentIndex < 0
+        ? 0
+        : progress.status === "failed"
+          ? currentIndex
+          : currentIndex + 1;
+  const percent = Math.round((reached / STAGES.length) * 100);
+
   return (
     <section className="mt-6 max-w-xl">
       <h2 className="text-[13px] font-medium">Mapping this repository</h2>
@@ -105,7 +120,21 @@ export function ProgressView({
         reaches it.
       </p>
 
-      <ol className="mt-4 border-t border-border">
+      <div
+        role="progressbar"
+        aria-label="Mapping stages complete"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        className="mt-5 h-px w-full overflow-hidden bg-border"
+      >
+        <div
+          className="h-full bg-foreground transition-[width] duration-700 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+
+      <ol className="mt-3 border-t border-border">
         {STAGES.map((entry, index) => {
           const step = stepAt(index, progress, stale);
           const detail =
@@ -121,7 +150,7 @@ export function ProgressView({
               <span
                 aria-hidden
                 title={step}
-                className={`font-mono text-[12px] ${MARK_STYLES[step]}`}
+                className={`inline-block font-mono text-[12px] ${MARK_STYLES[step]} ${step === "current" ? "atlas-live" : ""}`}
               >
                 {MARKS[step]}
               </span>

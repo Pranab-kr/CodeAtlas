@@ -429,7 +429,7 @@ function CentreTab({
       aria-selected={on}
       onClick={onClick}
       className={cn(
-        "-mb-px border-b pb-1.5",
+        "-mb-px border-b pb-1.5 transition-colors",
         on
           ? "border-selection text-foreground"
           : "border-transparent text-muted-foreground hover:text-foreground",
