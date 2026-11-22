@@ -49,17 +49,17 @@ export function ModuleNode({ id, data }: NodeProps<ModuleFlowNode>) {
         }}
         title={data.directory}
         className={cn(
-          "flex h-full w-full cursor-pointer flex-col justify-center gap-[2px] rounded-md border bg-card text-left font-mono transition-colors duration-150",
+          "flex h-full w-full cursor-pointer flex-col justify-center gap-[2px] rounded-lg border bg-surface text-left font-mono shadow-xs transition-all duration-150",
           data.selected
-            ? "border-selection bg-selection/[0.06]"
-            : "border-border hover:border-foreground/50",
+            ? "border-selection bg-selection/[0.07] shadow-sm ring-1 ring-selection/20"
+            : "border-hairline-strong hover:border-foreground/35 hover:shadow-sm",
           hovered &&
             "shadow-[inset_0_0_0_1px_var(--selection)]",
           "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-selection",
         )}
         style={{ paddingInline: PAD_X }}
       >
-        <span className="w-full truncate text-[12px] leading-4 text-foreground">
+        <span className="w-full truncate text-[12px] font-medium leading-4 text-foreground">
           {data.label}
         </span>
         <span className="flex w-full items-center gap-2 text-[10.5px] leading-3 tabular-nums">

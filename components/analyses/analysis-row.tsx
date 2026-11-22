@@ -8,10 +8,12 @@ import {
   type Progress,
 } from "@/lib/pipeline/stages";
 
+import { DeleteProjectButton } from "./delete-project-button";
 import { StatusBadge } from "./status-badge";
 
 export function AnalysisRow({
   id,
+  projectId,
   repository,
   repositoryUrl,
   updated,
@@ -19,6 +21,7 @@ export function AnalysisRow({
   staleAtRender,
 }: {
   id: string;
+  projectId: string;
   repository: string;
   repositoryUrl: string;
   updated: string;
@@ -41,20 +44,20 @@ export function AnalysisRow({
         : progress.message;
 
   return (
-    <TableRow>
-      <TableCell className="px-3 py-2 align-top">
+    <TableRow className="group">
+      <TableCell className="px-4 py-3 align-middle">
         {/* A full navigation: this row holds a live channel, and a client-side
             navigation racing one of its updates breaks the Flight client. */}
         <a
           href={`/analyses/${id}`}
-          className="block truncate font-mono text-[12px] hover:underline"
+          className="block truncate font-mono text-[12.5px] font-medium text-foreground transition-colors group-hover:text-selection hover:underline"
           title={repositoryUrl}
         >
           {repository}
         </a>
         {detail ? (
           <p
-            className={`mt-0.5 truncate text-[10.5px] ${
+            className={`mt-0.5 truncate text-[11.5px] ${
               progress.status === "failed"
                 ? "text-destructive"
                 : "text-muted-foreground"
@@ -65,13 +68,20 @@ export function AnalysisRow({
           </p>
         ) : null}
       </TableCell>
-      <TableCell className="px-3 py-2">
+      <TableCell className="px-4 py-3">
         <StatusBadge status={status} />
       </TableCell>
-      <TableCell className="hidden px-3 py-2 sm:table-cell">
-        <time className="font-mono text-[10.5px] text-muted-foreground">
+      <TableCell className="hidden px-4 py-3 sm:table-cell">
+        <time className="font-mono text-[11.5px] text-muted-foreground tabular-nums">
           {updated}
         </time>
+      </TableCell>
+      <TableCell className="px-3 py-3 text-right">
+        <DeleteProjectButton
+          projectId={projectId}
+          repository={repository}
+          iconOnly
+        />
       </TableCell>
     </TableRow>
   );

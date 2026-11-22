@@ -4,16 +4,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Warm paper surfaces, from the tweakcn theme. Colour still only means
-   something: green for incoming edges, amber for outgoing. next-themes puts
-   .dark on the html element. */
+/* Warm paper surfaces (light) and warm charcoal surfaces (dark).
+   Colour stays deliberate and semantic: green for incoming edges, amber for
+   outgoing, indigo-blue for active selection, and twelve categorical hues for
+   the rail and file kinds. */
 :root {
   --background: oklch(0.9195 0.0169 88.003);
   --foreground: oklch(0.235 0 0);
 
+  --well: oklch(0.892 0.0185 87.6);
+  --surface: oklch(0.953 0.0156 86.4257);
+  --chrome: oklch(0.936 0.0162 87.1);
+  --raised: oklch(0.974 0.011 85.8);
+  --hairline: oklch(0.235 0 0 / 0.08);
+  --hairline-strong: oklch(0.235 0 0 / 0.14);
+
   --card: oklch(0.953 0.0156 86.4257);
   --card-foreground: oklch(0.235 0 0);
-  --popover: oklch(0.953 0.0156 86.4257);
+  --popover: oklch(0.974 0.011 85.8);
   --popover-foreground: oklch(0.235 0 0);
 
   --primary: oklch(0.3012 0 0);
@@ -42,13 +50,6 @@
 
   --radius: 0.5rem;
 
-  --shadow-x: 0px;
-  --shadow-y: 4px;
-  --shadow-blur: 10px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.1;
-  --shadow-color: #000000;
-
   --sidebar: oklch(0.8985 0.0199 87.5195);
   --sidebar-foreground: oklch(0.235 0 0);
   --sidebar-primary: oklch(0.3012 0 0);
@@ -58,18 +59,43 @@
   --sidebar-border: oklch(0.8434 0.0231 87.1621);
   --sidebar-ring: oklch(0.3012 0 0);
 
-  --shadow-2xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.05);
+  /* Layered hairline + contact + ambient shadows. Crisp at 1px, never muddy. */
+  --shadow-2xs: 0 0 0 1px oklch(0.235 0 0 / 0.06), 0 1px 1px oklch(0.235 0 0 / 0.03);
+  --shadow-xs: 0 0 0 1px oklch(0.235 0 0 / 0.07), 0 1px 2px oklch(0.235 0 0 / 0.05);
   --shadow-sm:
-    0px 4px 10px 0px hsl(0 0% 0% / 0.1),
-    0px 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow-md: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 2px 4px -1px hsl(0 0% 0% / 0.1);
-  --shadow-lg: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 4px 6px -1px hsl(0 0% 0% / 0.1);
-  --shadow-xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 8px 10px -1px hsl(0 0% 0% / 0.1);
-  --shadow-2xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.25);
+    0 0 0 1px oklch(0.235 0 0 / 0.07),
+    0 1px 2px oklch(0.235 0 0 / 0.05),
+    0 4px 10px -2px oklch(0.235 0 0 / 0.06);
+  --shadow:
+    0 0 0 1px oklch(0.235 0 0 / 0.08),
+    0 2px 4px oklch(0.235 0 0 / 0.05),
+    0 8px 18px -4px oklch(0.235 0 0 / 0.07);
+  --shadow-md:
+    0 0 0 1px oklch(0.235 0 0 / 0.08),
+    0 4px 8px -2px oklch(0.235 0 0 / 0.06),
+    0 14px 28px -8px oklch(0.235 0 0 / 0.1);
+  --shadow-lg:
+    0 0 0 1px oklch(0.235 0 0 / 0.08),
+    0 8px 18px -4px oklch(0.235 0 0 / 0.08),
+    0 24px 48px -12px oklch(0.235 0 0 / 0.13);
+  --shadow-xl:
+    0 0 0 1px oklch(0.235 0 0 / 0.09),
+    0 12px 28px -6px oklch(0.235 0 0 / 0.1),
+    0 32px 64px -16px oklch(0.235 0 0 / 0.14);
+  --shadow-2xl:
+    0 0 0 1px oklch(0.235 0 0 / 0.1),
+    0 24px 56px -12px oklch(0.235 0 0 / 0.18);
+  --shadow-window:
+    0 0 0 1px oklch(0.235 0 0 / 0.09),
+    0 2px 4px oklch(0.235 0 0 / 0.04),
+    0 18px 42px -12px oklch(0.235 0 0 / 0.14),
+    0 36px 76px -24px oklch(0.235 0 0 / 0.1);
+  --shadow-float:
+    0 0 0 1px oklch(0.235 0 0 / 0.08),
+    0 4px 12px oklch(0.235 0 0 / 0.07),
+    0 16px 32px -10px oklch(0.235 0 0 / 0.12);
 
-  --tracking-normal: 0.01em;
+  --tracking-normal: -0.004em;
   --spacing: 0.25rem;
 
   --incoming: oklch(0.527 0.154 150.069);
@@ -98,9 +124,16 @@
   --background: oklch(0.1913 0 0);
   --foreground: oklch(0.9173 0.0133 82.4015);
 
+  --well: oklch(0.158 0 0);
+  --surface: oklch(0.2264 0 0);
+  --chrome: oklch(0.184 0 0);
+  --raised: oklch(0.268 0 0);
+  --hairline: oklch(1 0 0 / 0.075);
+  --hairline-strong: oklch(1 0 0 / 0.14);
+
   --card: oklch(0.2264 0 0);
   --card-foreground: oklch(0.9173 0.0133 82.4015);
-  --popover: oklch(0.2264 0 0);
+  --popover: oklch(0.258 0 0);
   --popover-foreground: oklch(0.9173 0.0133 82.4015);
 
   --primary: oklch(0.852 0.0205 100.6306);
@@ -136,23 +169,35 @@
   --sidebar-border: oklch(0.2931 0 0);
   --sidebar-ring: oklch(0.852 0.0205 100.6306);
 
-  --shadow-x: 0px;
-  --shadow-y: 6px;
-  --shadow-blur: 15px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.3;
-  --shadow-color: #000000;
-
-  --shadow-2xs: 0px 6px 15px 0px hsl(0 0% 0% / 0.15);
-  --shadow-xs: 0px 6px 15px 0px hsl(0 0% 0% / 0.15);
+  /* Dark mode elevates with crisp light hairlines and surface step. */
+  --shadow-2xs: 0 0 0 1px oklch(1 0 0 / 0.07), 0 1px 1px oklch(0 0 0 / 0.28);
+  --shadow-xs: 0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 2px oklch(0 0 0 / 0.34);
   --shadow-sm:
-    0px 6px 15px 0px hsl(0 0% 0% / 0.3),
-    0px 1px 2px -1px hsl(0 0% 0% / 0.3);
-  --shadow: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 1px 2px -1px hsl(0 0% 0% / 0.3);
-  --shadow-md: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 2px 4px -1px hsl(0 0% 0% / 0.3);
-  --shadow-lg: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 4px 6px -1px hsl(0 0% 0% / 0.3);
-  --shadow-xl: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 8px 10px -1px hsl(0 0% 0% / 0.3);
-  --shadow-2xl: 0px 6px 15px 0px hsl(0 0% 0% / 0.75);
+    0 0 0 1px oklch(1 0 0 / 0.08),
+    0 2px 6px oklch(0 0 0 / 0.34);
+  --shadow:
+    0 0 0 1px oklch(1 0 0 / 0.09),
+    0 6px 16px oklch(0 0 0 / 0.42);
+  --shadow-md:
+    0 0 0 1px oklch(1 0 0 / 0.09),
+    0 10px 26px oklch(0 0 0 / 0.48);
+  --shadow-lg:
+    0 0 0 1px oklch(1 0 0 / 0.1),
+    0 18px 44px oklch(0 0 0 / 0.58);
+  --shadow-xl:
+    0 0 0 1px oklch(1 0 0 / 0.1),
+    0 24px 60px oklch(0 0 0 / 0.65);
+  --shadow-2xl:
+    0 0 0 1px oklch(1 0 0 / 0.12),
+    0 32px 80px oklch(0 0 0 / 0.72);
+  --shadow-window:
+    0 0 0 1px oklch(1 0 0 / 0.1),
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    0 24px 60px -12px oklch(0 0 0 / 0.68);
+  --shadow-float:
+    0 0 0 1px oklch(1 0 0 / 0.1),
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    0 12px 32px oklch(0 0 0 / 0.55);
 
   --incoming: oklch(0.723 0.219 149.579);
   --outgoing: oklch(0.769 0.188 70.08);
@@ -176,6 +221,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-well: var(--well);
+  --color-surface: var(--surface);
+  --color-chrome: var(--chrome);
+  --color-raised: var(--raised);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -219,6 +270,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -228,9 +280,11 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+  --shadow-window: var(--shadow-window);
+  --shadow-float: var(--shadow-float);
 
-  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
-  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-tighter: calc(var(--tracking-normal) - 0.04em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.02em);
   --tracking-normal: var(--tracking-normal);
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
@@ -244,12 +298,13 @@
 
   html {
     @apply font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   body {
     @apply bg-background text-foreground;
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.5;
     letter-spacing: var(--tracking-normal);
   }
 
@@ -266,6 +321,67 @@
   }
 }
 
+/* ── StageShow craft utilities ──────────────────────────────────────────────
+   Optical cap-height centering for pills/badges/chips, hairline window cards,
+   recessed dot-grid wells, and calm scrollbars. */
+
+.text-trim {
+  text-box: trim-both cap alphabetic;
+}
+
+.atlas-surface {
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.atlas-window {
+  background: var(--surface);
+  box-shadow: var(--shadow-window);
+}
+
+.atlas-float {
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+}
+
+.atlas-kicker {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Subtle dot pattern for the graph well & framed product plates */
+.atlas-dot-well {
+  background-color: var(--well);
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--foreground) 12%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 18px 18px;
+}
+
+/* Subtle custom scrollbars for dense workspace panes */
+.atlas-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+}
+.atlas-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.atlas-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.atlas-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--foreground) 18%, transparent);
+  border-radius: 999px;
+}
+.atlas-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--foreground) 30%, transparent);
+}
+
 /* ── Landing motion ────────────────────────────────────────────────────────
    One entrance for the hero, and state changes elsewhere. Everything here
    stops under reduced motion, and the headline never stays hidden. */
@@ -276,15 +392,13 @@
   }
 }
 
-/* Graph-paper hero backdrop. Adapted from the CSS-only AnimatedGrid by
-   rmahammad on 21st.dev. Line colour is the border token, so the page still
-   defines no colour of its own. */
+/* Graph-paper hero backdrop. Line colour uses the existing border token. */
 .atlas-grid {
-  mask-image: radial-gradient(ellipse at 50% 38%, #000 28%, transparent 78%);
+  mask-image: radial-gradient(ellipse at 50% 34%, #000 22%, transparent 76%);
   -webkit-mask-image: radial-gradient(
-    ellipse at 50% 38%,
-    #000 28%,
-    transparent 78%
+    ellipse at 50% 34%,
+    #000 22%,
+    transparent 76%
   );
 }
 
@@ -300,7 +414,7 @@
     linear-gradient(to right, var(--border) 1px, transparent 1px),
     linear-gradient(to bottom, var(--border) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
-  opacity: 0.55;
+  opacity: 0.45;
   animation: atlas-grid-drift 90s linear infinite;
   will-change: background-position;
 }
@@ -310,7 +424,7 @@
     linear-gradient(to right, var(--border) 1px, transparent 1px),
     linear-gradient(to bottom, var(--border) 1px, transparent 1px);
   background-size: var(--grid-major) var(--grid-major);
-  opacity: 0.75;
+  opacity: 0.65;
   animation: atlas-grid-drift 90s linear infinite;
   will-change: background-position;
 }
@@ -332,7 +446,7 @@
 @keyframes atlas-word-in {
   from {
     opacity: 0;
-    transform: translateY(0.22em);
+    transform: translateY(0.2em);
   }
   to {
     opacity: 1;
@@ -340,20 +454,20 @@
   }
 }
 
-/* Selection wash on the last phrase. The same blue the map uses when a file
-   is selected, at low opacity. */
+/* Selection wash on the closing phrase, matching the map's active file accent. */
 .atlas-highlight {
-  padding-inline: 0.05em;
+  padding-inline: 0.08em;
+  border-radius: 0.14em;
   background-image: linear-gradient(
-    color-mix(in oklab, var(--selection) 12%, transparent),
-    color-mix(in oklab, var(--selection) 12%, transparent)
+    color-mix(in oklab, var(--selection) 13%, transparent),
+    color-mix(in oklab, var(--selection) 13%, transparent)
   );
   background-repeat: no-repeat;
   background-position: 0 58%;
-  background-size: 0% 86%;
+  background-size: 0% 88%;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  animation: atlas-highlight-in 620ms cubic-bezier(0.22, 1, 0.36, 1) 680ms
+  animation: atlas-highlight-in 620ms cubic-bezier(0.22, 1, 0.36, 1) 640ms
     forwards;
 }
 
@@ -366,12 +480,51 @@
 
 @keyframes atlas-highlight-in {
   to {
-    background-size: 100% 86%;
+    background-size: 100% 88%;
+  }
+}
+
+/* Blur-fade swap for the rotating hero highlight word. */
+.atlas-blur-in {
+  display: inline-block;
+  animation: atlas-blur-fade-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity, filter;
+}
+
+.atlas-blur-out {
+  display: inline-block;
+  animation: atlas-blur-fade-out 360ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes atlas-blur-fade-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(0.16em) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes atlas-blur-fade-out {
+  from {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(-0.16em) scale(0.97);
   }
 }
 
 .atlas-reveal {
-  animation: atlas-rise-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: atlas-rise-in 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes atlas-rise-in {
@@ -402,6 +555,36 @@
   }
 }
 
+/* React Flow controls styled to match StageShow floating chrome */
+.react-flow__controls {
+  border-radius: 10px !important;
+  overflow: hidden;
+  border: 0 !important;
+  background: var(--raised) !important;
+  box-shadow: var(--shadow-float) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--hairline) !important;
+  color: var(--foreground) !important;
+  width: 28px !important;
+  height: 28px !important;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -411,18 +594,23 @@
   .atlas-grid::after,
   .atlas-word,
   .atlas-highlight,
+  .atlas-blur-in,
+  .atlas-blur-out,
   .atlas-reveal,
   .atlas-live {
     animation: none !important;
   }
 
   .atlas-highlight {
-    background-size: 100% 86%;
+    background-size: 100% 88%;
   }
 
   .atlas-word,
+  .atlas-blur-in,
   .atlas-reveal {
     opacity: 1;
+    filter: none;
     transform: none;
   }
 }
+

@@ -4,6 +4,22 @@ import type { Selection } from "@/lib/graph/selection";
 import type { ParsedRoute, RouteCoverage } from "@/lib/parser/types";
 import { cn } from "@/lib/utils";
 
+function methodTone(method: string): string {
+  switch (method.toUpperCase()) {
+    case "GET":
+      return "bg-incoming/12 text-incoming ring-incoming/25";
+    case "POST":
+      return "bg-outgoing/12 text-outgoing ring-outgoing/25";
+    case "PUT":
+    case "PATCH":
+      return "bg-selection/12 text-selection ring-selection/25";
+    case "DELETE":
+      return "bg-destructive/12 text-destructive ring-destructive/25";
+    default:
+      return "bg-well text-foreground ring-hairline";
+  }
+}
+
 // Every route the adapters recovered, one row per method and pattern.
 // Clicking a row selects the file that declares it, so the pane shows that
 // file while the table stays open. Nothing here is inferred: what the adapters
@@ -28,39 +44,39 @@ export function RouteTable({
   const hoveredFile = hover?.kind === "file" ? hover.path : null;
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-background text-[11px]">
-      <p className="border-b border-border px-3 py-1.5 text-muted-foreground">
+    <div className="atlas-scroll absolute inset-0 overflow-y-auto bg-surface text-[12px]">
+      <div className="border-b border-hairline bg-chrome/60 px-4 py-2 text-[11.5px] text-muted-foreground">
         Listed only where the method and the full path are both written in the
         code.
-      </p>
+      </div>
 
       {coverage?.withheld ? (
-        <p className="border-b border-border px-3 py-1.5">
-          <span className="text-foreground">No routes listed: </span>
+        <div className="border-b border-hairline bg-well/50 px-4 py-2.5 text-[12px]">
+          <span className="font-medium text-foreground">No routes listed: </span>
           <span className="text-muted-foreground">
             {coverage.withheld}.
           </span>
-        </p>
+        </div>
       ) : null}
 
       {routes.length === 0 ? (
         coverage?.withheld ? null : (
-          <p className="px-3 py-2 text-muted-foreground">
+          <div className="px-4 py-8 text-center text-[12.5px] text-muted-foreground">
             {coverage === null
               ? "Route extraction wasn't stored for this analysis. Run it again to extract routes."
-              : "No routes."}
-          </p>
+              : "No routes found in this analysis."}
+          </div>
         )
       ) : (
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-background">
-            <tr className="h-[22px] border-b border-border text-left text-[10px] text-muted-foreground">
-              <th className="w-16 px-3 font-normal">Method</th>
-              <th className="px-3 font-normal">Pattern</th>
-              <th className="px-3 font-normal">Declared in</th>
+          <thead className="sticky top-0 z-10 bg-chrome/95 backdrop-blur-xs">
+            <tr className="h-8 border-b border-hairline text-left text-[11px] font-medium text-muted-foreground">
+              <th className="w-24 px-4 font-medium">Method</th>
+              <th className="px-3 font-medium">Pattern</th>
+              <th className="px-4 font-medium">Declared in</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-hairline">
             {routes.map((route) => {
               const selected = route.path === selectedFile;
               const hovered = route.path === hoveredFile;
@@ -73,18 +89,29 @@ export function RouteTable({
                   }
                   onMouseLeave={() => onHover(null)}
                   className={cn(
-                    "h-[22px] cursor-pointer font-mono",
+                    "h-9 cursor-pointer transition-colors",
                     selected
-                      ? "bg-selection/15 shadow-[inset_2px_0_0_var(--selection)]"
+                      ? "bg-selection/12 shadow-[inset_2px_0_0_var(--selection)]"
                       : hovered
-                        ? "bg-muted/50"
-                        : "hover:bg-muted/50",
+                        ? "bg-well/70"
+                        : "hover:bg-well/50",
                   )}
                 >
-                  <td className="px-3">{route.method}</td>
-                  <td className="px-3 break-all">{route.pattern}</td>
+                  <td className="px-4">
+                    <span
+                      className={cn(
+                        "inline-flex h-5 items-center rounded-md px-1.5 font-mono text-[10.5px] font-medium ring-1 ring-inset",
+                        methodTone(route.method),
+                      )}
+                    >
+                      {route.method}
+                    </span>
+                  </td>
+                  <td className="px-3 font-mono text-[11.5px] text-foreground break-all">
+                    {route.pattern}
+                  </td>
                   <td
-                    className="px-3 text-muted-foreground"
+                    className="px-4 font-mono text-[11.5px] text-muted-foreground"
                     title={route.path}
                   >
                     <button
@@ -97,9 +124,12 @@ export function RouteTable({
                         onHover({ kind: "file", path: route.path })
                       }
                       onBlur={() => onHover(null)}
-                      className="text-left break-all hover:text-foreground focus-visible:text-foreground focus-visible:underline"
+                      className="text-left break-all transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline"
                     >
-                      {route.path}:{route.line}
+                      {route.path}
+                      <span className="text-muted-foreground/70">
+                        :{route.line}
+                      </span>
                     </button>
                   </td>
                 </tr>
@@ -110,7 +140,7 @@ export function RouteTable({
       )}
 
       {coverage !== null && coverage.omitted > 0 ? (
-        <p className="border-t border-border px-3 py-1.5 text-muted-foreground">
+        <p className="border-t border-hairline bg-chrome/50 px-4 py-2.5 text-[11.5px] text-muted-foreground">
           {coverage.omitted}{" "}
           {coverage.omitted === 1 ? "declaration is" : "declarations are"} not
           listed because the method or full path is not written out.

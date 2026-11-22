@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2, RotateCw } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
 
 import { rerunAnalysis, type RunState } from "@/app/(app)/actions";
@@ -51,12 +52,22 @@ export function RerunButton({
     >
       <input type="hidden" name="analysisId" value={analysisId} />
       <Button type="submit" variant="outline" size="xs" disabled={pending}>
-        {pending ? "Starting…" : "Run again"}
+        {pending ? (
+          <>
+            <Loader2 className="animate-spin" />
+            Starting…
+          </>
+        ) : (
+          <>
+            <RotateCw className="size-3" />
+            Run again
+          </>
+        )}
       </Button>
       {state.error ? (
         <span
           role="alert"
-          className="font-mono text-[10.5px] text-destructive"
+          className="font-mono text-[11px] text-destructive"
         >
           {state.error}
         </span>

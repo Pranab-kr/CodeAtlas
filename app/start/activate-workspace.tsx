@@ -1,9 +1,10 @@
 "use client";
 
 import { useOrganizationList } from "@clerk/nextjs";
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AtlasMark } from "@/components/brand/mark";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function ActivateWorkspace({
   organizationId,
@@ -33,33 +34,38 @@ export function ActivateWorkspace({
   }, [isLoaded, organizationId, next, setActive]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <Card className="w-full max-w-sm gap-0 py-0">
-        <CardHeader className="px-4 pt-4">
-          <CardTitle className="text-[13px]">CodeAtlas</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+    <main className="atlas-dot-well flex min-h-dvh items-center justify-center p-6">
+      <div className="atlas-window w-full max-w-sm rounded-2xl p-5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-well shadow-2xs">
+            <AtlasMark className="size-4" />
+          </span>
+          <span className="text-[13.5px] font-medium">CodeAtlas</span>
+        </div>
+
+        <div className="mt-4">
           {failed ? (
             <>
-              <p className="text-[12px] text-muted-foreground">
-                The organization could not be activated. Reload to try again.
+              <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+                The workspace could not be activated. Reload to try again.
               </p>
               <Button
                 type="button"
-                size="xs"
-                className="mt-2"
+                size="sm"
+                className="mt-3"
                 onClick={() => window.location.reload()}
               >
                 Reload
               </Button>
             </>
           ) : (
-            <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-              Setting up your workspace…
-            </p>
+            <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" />
+              <span>Setting up your workspace…</span>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </main>
   );
 }

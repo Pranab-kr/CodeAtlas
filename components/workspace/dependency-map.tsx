@@ -3,6 +3,7 @@
 import {
   Background,
   BackgroundVariant,
+  Controls,
   ReactFlow,
   ReactFlowProvider,
   getViewportForBounds,
@@ -234,16 +235,17 @@ function GraphCanvas({
           deleteKeyCode={null}
           zoomOnDoubleClick={false}
           className={cn(
-            "h-full w-full",
+            "h-full w-full bg-well",
             ready ? "opacity-100" : "opacity-0",
           )}
         >
           <Background
             variant={BackgroundVariant.Dots}
-            gap={18}
-            size={1}
-            color="var(--border)"
+            gap={20}
+            size={1.1}
+            color="var(--hairline-strong)"
           />
+          <Controls showInteractive={false} position="bottom-left" />
         </ReactFlow>
       </MapHoverProvider>
     </GraphActionsProvider>

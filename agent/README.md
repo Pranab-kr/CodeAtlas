@@ -13,7 +13,8 @@ then:
 cp env.example .env
 # fill LANGSMITH_API_KEY and the model provider values
 npm install
-npm run dev        # mda dev .
+npm run dev        # mda dev . (Linux / macOS / WSL)
+npm run dev:win    # Windows: compiles .mda/dev and runs LangGraph via npx
 ```
 
 `mda dev` prints the server URL (default `http://127.0.0.1:2024`). Put that and

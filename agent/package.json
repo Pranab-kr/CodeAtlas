@@ -6,6 +6,7 @@
   "description": "The CodeAtlas repository agent, built on Managed Deep Agents.",
   "scripts": {
     "dev": "mda dev . --hostname 127.0.0.1",
+    "dev:win": "node ../scripts/dev-agent-win.mjs",
     "deploy": "mda deploy .",
     "typecheck": "tsc --noEmit"
   },
