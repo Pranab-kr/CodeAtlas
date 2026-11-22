@@ -122,6 +122,9 @@ async function AnalysesList() {
             <TableHead className="hidden h-7 w-36 px-3 text-[10.5px] font-medium text-muted-foreground sm:table-cell">
               updated
             </TableHead>
+            <TableHead className="h-7 w-10 px-2">
+              <span className="sr-only">actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -140,6 +143,7 @@ async function AnalysesList() {
               <AnalysisRow
                 key={key}
                 id={analysis.id}
+                projectId={analysis.project_id}
                 repository={project?.name ?? "unknown repository"}
                 repositoryUrl={project?.repository_url ?? ""}
                 updated={formatUpdatedAt(analysis.updated_at)}

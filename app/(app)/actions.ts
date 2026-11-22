@@ -29,7 +29,15 @@ export interface RunState {
   analysisId: string | null;
 }
 
+export interface DeleteState {
+  error: string | null;
+  deleted: boolean;
+}
+
 const NOT_STARTED: RunState = { error: null, analysisId: null };
+const NOT_DELETED: DeleteState = { error: null, deleted: false };
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function submitAnalysis(
   _previous: RunState,
@@ -163,6 +171,48 @@ export async function rerunAnalysis(
   }
 
   return { error: null, analysisId: analysis.id };
+}
+
+/**
+ * Deletes the project through the signed-in client so the policy decides
+ * ownership. Deleting the project cascades to its analysis and stored map.
+ */
+export async function deleteProject(
+  _previous: DeleteState,
+  form: FormData,
+): Promise<DeleteState> {
+  const { orgId } = await auth();
+  if (!orgId) {
+    return { ...NOT_DELETED, error: "No active organization" };
+  }
+
+  const projectId = form.get("projectId");
+  if (typeof projectId !== "string" || !UUID.test(projectId)) {
+    return { ...NOT_DELETED, error: "No repository to delete" };
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId)
+    .select("id");
+
+  if (error) {
+    return {
+      ...NOT_DELETED,
+      error: `Deleting the repository failed: ${error.message}`,
+    };
+  }
+
+  if (data.length === 0) {
+    return {
+      ...NOT_DELETED,
+      error: "That repository isn't available in this workspace",
+    };
+  }
+
+  return { error: null, deleted: true };
 }
 
 /**

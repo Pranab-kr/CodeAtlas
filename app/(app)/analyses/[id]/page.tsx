@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { DeleteProjectButton } from "@/components/analyses/delete-project-button";
 import { ProgressView } from "@/components/analyses/progress-view";
 import { RerunButton } from "@/components/analyses/rerun-button";
 import { StatusBadge } from "@/components/analyses/status-badge";
@@ -94,6 +95,7 @@ async function AnalysisBody({ params }: Parameter) {
       return (
         <div className="flex h-full flex-col">
           <AnalysisBar
+            projectId={analysis.project_id}
             name={project.name}
             url={project.repository_url}
             commit={analysis.commit_sha}
@@ -120,6 +122,7 @@ async function AnalysisBody({ params }: Parameter) {
     return (
       <div className="flex h-full flex-col">
         <AnalysisBar
+          projectId={analysis.project_id}
           name={project.name}
           url={project.repository_url}
           commit={analysis.commit_sha}
@@ -166,6 +169,7 @@ async function AnalysisBody({ params }: Parameter) {
       <div className="h-full overflow-auto">
         <div className="mx-auto w-full max-w-2xl px-4 py-5">
           <AnalysisHeading
+            projectId={analysis.project_id}
             name={project.name}
             url={project.repository_url}
             commit={analysis.commit_sha}
@@ -194,6 +198,7 @@ async function AnalysisBody({ params }: Parameter) {
     <div className="h-full overflow-auto">
       <div className="mx-auto w-full max-w-2xl px-4 py-5">
         <AnalysisHeading
+          projectId={analysis.project_id}
           name={project.name}
           url={project.repository_url}
           commit={analysis.commit_sha}
@@ -210,6 +215,7 @@ async function AnalysisBody({ params }: Parameter) {
 }
 
 function AnalysisBar({
+  projectId,
   name,
   url,
   commit,
@@ -217,6 +223,7 @@ function AnalysisBar({
   analysisId,
   rerun,
 }: {
+  projectId: string;
   name: string;
   url: string;
   commit: string | null;
@@ -257,19 +264,22 @@ function AnalysisBar({
           {commit.slice(0, 7)}
         </span>
       ) : null}
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
         {rerun ? <RerunButton analysisId={analysisId} /> : null}
+        <DeleteProjectButton projectId={projectId} repository={name} />
       </div>
     </header>
   );
 }
 
 function AnalysisHeading({
+  projectId,
   name,
   url,
   commit,
   framework,
 }: {
+  projectId: string;
   name: string;
   url: string;
   commit: string | null;
@@ -304,6 +314,9 @@ function AnalysisHeading({
             {commit.slice(0, 7)}
           </span>
         ) : null}
+        <div className="ml-auto">
+          <DeleteProjectButton projectId={projectId} repository={name} />
+        </div>
       </div>
       <p className="mt-0.5 font-mono text-[10.5px] text-muted-foreground">
         {url}

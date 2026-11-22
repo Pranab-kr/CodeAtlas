@@ -8,10 +8,12 @@ import {
   type Progress,
 } from "@/lib/pipeline/stages";
 
+import { DeleteProjectButton } from "./delete-project-button";
 import { StatusBadge } from "./status-badge";
 
 export function AnalysisRow({
   id,
+  projectId,
   repository,
   repositoryUrl,
   updated,
@@ -19,6 +21,7 @@ export function AnalysisRow({
   staleAtRender,
 }: {
   id: string;
+  projectId: string;
   repository: string;
   repositoryUrl: string;
   updated: string;
@@ -72,6 +75,13 @@ export function AnalysisRow({
         <time className="font-mono text-[10.5px] text-muted-foreground">
           {updated}
         </time>
+      </TableCell>
+      <TableCell className="px-2 py-2 text-right">
+        <DeleteProjectButton
+          projectId={projectId}
+          repository={repository}
+          iconOnly
+        />
       </TableCell>
     </TableRow>
   );
