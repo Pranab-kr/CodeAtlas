@@ -10,7 +10,7 @@ The Next app owns every fact about the repository. Start it first on port 3000,
 then:
 
 ```bash
-cp env.example .env
+cp .env.example .env
 # fill LANGSMITH_API_KEY and the model provider values
 npm install
 npm run dev        # mda dev . (Linux / macOS / WSL)

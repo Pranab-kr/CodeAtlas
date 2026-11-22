@@ -82,23 +82,92 @@ export function parseRepositoryUrl(input: string): Repository {
   };
 }
 
+const HEAD_CACHE_TTL_MS = 2 * 60_000;
+const HEAD_CACHE_MAX = 500;
+
+interface CachedHead {
+  sha: string;
+  expiresAt: number;
+}
+
+const headCache = new Map<string, CachedHead>();
+const inflightHead = new Map<string, Promise<string>>();
+
+export interface ResolveHeadOptions {
+  /**
+   * Reuse a recent HEAD commit lookup (up to 2 minutes) to keep repeated
+   * staleness checks from exhausting GitHub's API rate limit. Fresh analyses
+   * leave this false so they always fetch the current commit.
+   */
+  useCache?: boolean;
+}
+
 /**
  * The commit is resolved first and the archive fetched at exactly that commit,
  * so the recorded sha is the code that was parsed, not whatever HEAD became
- * while the download ran. Unauthenticated on purpose: no token is stored.
+ * while the download ran. Uses GITHUB_TOKEN when configured to raise the
+ * GitHub API rate limit from 60 to 5,000 requests/hour.
  */
 export async function resolveHeadCommit(
   repository: Repository,
+  options: ResolveHeadOptions = {},
 ): Promise<string> {
+  const key = repository.label;
+
+  if (options.useCache) {
+    const cached = headCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.sha;
+    }
+    const pending = inflightHead.get(key);
+    if (pending) {
+      return pending;
+    }
+  }
+
+  const promise = fetchHeadCommit(repository).then((sha) => {
+    cacheHead(key, sha);
+    return sha;
+  });
+
+  if (options.useCache) {
+    inflightHead.set(key, promise);
+    try {
+      return await promise;
+    } finally {
+      inflightHead.delete(key);
+    }
+  }
+
+  return promise;
+}
+
+function cacheHead(key: string, sha: string): void {
+  if (headCache.size >= HEAD_CACHE_MAX) {
+    const oldest = headCache.keys().next().value;
+    if (oldest !== undefined) {
+      headCache.delete(oldest);
+    }
+  }
+  headCache.set(key, { sha, expiresAt: Date.now() + HEAD_CACHE_TTL_MS });
+}
+
+async function fetchHeadCommit(repository: Repository): Promise<string> {
   const what = `Asking GitHub for ${repository.label}'s latest commit`;
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.sha",
+    "User-Agent": "codeatlas",
+  };
+  const token = process.env.GITHUB_TOKEN?.trim();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await withTimeout(what, API_TIMEOUT_MS, () =>
     fetch(
       `https://api.github.com/repos/${repository.owner}/${repository.name}/commits/HEAD`,
       {
-        headers: {
-          Accept: "application/vnd.github.sha",
-          "User-Agent": "codeatlas",
-        },
+        headers,
         signal: AbortSignal.timeout(API_TIMEOUT_MS),
       },
     ),
@@ -137,7 +206,7 @@ export async function resolveHeadCommit(
       ? ` until ${new Date(reset * 1000).toISOString()}`
       : "";
     throw new PipelineError(
-      `GitHub's unauthenticated rate limit is used up${when}`,
+      `GitHub's API rate limit is used up${when}`,
     );
   }
 

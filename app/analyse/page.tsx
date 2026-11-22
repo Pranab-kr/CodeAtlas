@@ -1,7 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
 
-import { startRepositoryAnalysis } from "@/app/(app)/actions";
 import { AtlasMark } from "@/components/brand/mark";
 import {
   Alert,
@@ -9,6 +8,11 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  parseRepositoryUrl,
+  PipelineError,
+  type Repository,
+} from "@/lib/pipeline/github";
 import { cn } from "@/lib/utils";
 import { StartRedirect } from "./start-redirect";
 
@@ -54,31 +58,41 @@ async function Analyse({ searchParams }: Parameter) {
     );
   }
 
-  const result = await startRepositoryAnalysis(url);
+  let repository: Repository;
+  try {
+    repository = parseRepositoryUrl(url);
+  } catch (error) {
+    const message =
+      error instanceof PipelineError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : String(error);
 
-  if (result.analysisId) {
-    return <StartRedirect analysisId={result.analysisId} />;
+    return (
+      <div className="atlas-window w-full max-w-md rounded-2xl p-5">
+        <Alert variant="destructive" className="rounded-xl">
+          <AlertTitle>Could not start the analysis.</AlertTitle>
+          <AlertDescription className="font-mono text-[11px] wrap-break-word">
+            {message}
+          </AlertDescription>
+        </Alert>
+        <a
+          href="/dashboard"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "mt-4",
+          )}
+        >
+          Back to analyses
+        </a>
+      </div>
+    );
   }
 
-  return (
-    <div className="atlas-window w-full max-w-md rounded-2xl p-5">
-      <Alert variant="destructive" className="rounded-xl">
-        <AlertTitle>Could not start the analysis.</AlertTitle>
-        <AlertDescription className="font-mono text-[11px] wrap-break-word">
-          {result.error ?? "No reason was recorded."}
-        </AlertDescription>
-      </Alert>
-      <a
-        href="/dashboard"
-        className={cn(
-          buttonVariants({ variant: "outline", size: "sm" }),
-          "mt-4",
-        )}
-      >
-        Back to analyses
-      </a>
-    </div>
-  );
+  // Starting the run happens through a POST Server Action on mount rather than
+  // during this GET render, so prefetches and crawlers can't trigger analyses.
+  return <StartRedirect repositoryUrl={repository.url} />;
 }
 
 function Starting() {

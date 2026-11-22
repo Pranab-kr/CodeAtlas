@@ -30,7 +30,11 @@ export async function POST(request: Request): Promise<Response> {
 
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (Buffer.byteLength(raw, "utf8") > MAX_BODY) {
+      return fail("The tool request is too large.", 413);
+    }
+    body = JSON.parse(raw);
   } catch {
     return fail("The tool request is not JSON.", 400);
   }

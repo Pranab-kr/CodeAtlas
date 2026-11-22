@@ -92,7 +92,13 @@ export async function startRepositoryAnalysis(
       start(claimed);
     }
   } catch (error) {
-    return { ...NOT_STARTED, error: messageOf(error) };
+    if (error instanceof AlreadyRunningError) {
+      return { ...NOT_STARTED, error: error.message };
+    }
+    if (!(error instanceof PipelineError)) {
+      console.error("Starting repository analysis failed:", error);
+    }
+    return { ...NOT_STARTED, error: userErrorMessage(error) };
   }
 
   return { error: null, analysisId };
@@ -103,7 +109,7 @@ export async function rerunAnalysis(
   form: FormData,
 ): Promise<RunState> {
   const value = form.get("analysisId");
-  if (typeof value !== "string" || value === "") {
+  if (typeof value !== "string" || !UUID.test(value)) {
     return { ...NOT_STARTED, error: "No analysis to run" };
   }
 
@@ -117,9 +123,10 @@ export async function rerunAnalysis(
     .maybeSingle();
 
   if (error) {
+    console.error("Reading the analysis for rerun failed:", error.message);
     return {
       ...NOT_STARTED,
-      error: `Reading the analysis failed: ${error.message}`,
+      error: "Could not read that analysis. Try again in a moment.",
     };
   }
   if (!analysis) {
@@ -136,9 +143,10 @@ export async function rerunAnalysis(
     .maybeSingle();
 
   if (projectError) {
+    console.error("Reading the project for rerun failed:", projectError.message);
     return {
       ...NOT_STARTED,
-      error: `Reading the repository failed: ${projectError.message}`,
+      error: "Could not read that repository. Try again in a moment.",
     };
   }
   if (!project) {
@@ -167,7 +175,8 @@ export async function rerunAnalysis(
     if (error instanceof AlreadyRunningError) {
       return { ...NOT_STARTED, error: error.message };
     }
-    return { ...NOT_STARTED, error: messageOf(error) };
+    console.error("Claiming analysis rerun failed:", error);
+    return { ...NOT_STARTED, error: userErrorMessage(error) };
   }
 
   return { error: null, analysisId: analysis.id };
@@ -199,9 +208,10 @@ export async function deleteProject(
     .select("id");
 
   if (error) {
+    console.error("Deleting repository failed:", error.message);
     return {
       ...NOT_DELETED,
-      error: `Deleting the repository failed: ${error.message}`,
+      error: "Could not delete that repository. Try again in a moment.",
     };
   }
 
@@ -215,16 +225,46 @@ export async function deleteProject(
   return { error: null, deleted: true };
 }
 
+// Bound concurrent in-process tar extractions and ts-morph parses so burst
+// submissions cannot exhaust container memory or stall health checks.
+const MAX_CONCURRENT_RUNS = 2;
+let activeRuns = 0;
+const waitingRuns: Array<() => void> = [];
+
+async function acquireRunSlot(): Promise<void> {
+  if (activeRuns < MAX_CONCURRENT_RUNS) {
+    activeRuns += 1;
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    waitingRuns.push(() => {
+      activeRuns += 1;
+      resolve();
+    });
+  });
+}
+
+function releaseRunSlot(): void {
+  activeRuns = Math.max(0, activeRuns - 1);
+  const next = waitingRuns.shift();
+  if (next) {
+    next();
+  }
+}
+
 /**
  * The run outlives the response. It records its own failure on the row; this
  * only makes sure nothing is lost if even that fails.
  */
 function start(claimed: ClaimedRun): void {
   after(async () => {
+    await acquireRunSlot();
     try {
       await runAnalysis(createPipelineSupabaseClient(), claimed);
     } catch (error) {
       console.error(`Analysis ${claimed.analysisId} failed:`, error);
+    } finally {
+      releaseRunSlot();
     }
   });
 }
@@ -234,4 +274,11 @@ function messageOf(error: unknown): string {
     return error.message;
   }
   return error instanceof Error ? error.message : String(error);
+}
+
+function userErrorMessage(error: unknown): string {
+  if (error instanceof PipelineError) {
+    return error.message;
+  }
+  return "Could not start the analysis. Try again in a moment.";
 }
