@@ -45,3 +45,4 @@ opencode.json
 
 # supabase cli temp files
 supabase/.temp/
+.commandcode/
