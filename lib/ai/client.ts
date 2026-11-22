@@ -20,7 +20,9 @@ function aiConfig(): AiConfig {
 
   if (!baseUrl || !apiKey || !model) {
     throw new AiNotConfiguredError(
-      "AI is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env.local.",
+      process.env.NODE_ENV === "production"
+        ? "AI explanations are not enabled on this deployment."
+        : "AI is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env.local.",
     );
   }
 

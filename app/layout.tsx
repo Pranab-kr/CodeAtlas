@@ -2,7 +2,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";import { env } from "@/lib/env";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 

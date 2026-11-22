@@ -59,7 +59,9 @@ export async function explainAction(
     return {
       ok: false,
       error:
-        "AI is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env.local.",
+        process.env.NODE_ENV === "production"
+          ? "AI explanations are not enabled on this deployment."
+          : "AI is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env.local.",
     };
   }
 
@@ -123,7 +125,9 @@ export async function stalenessAction(
 
   try {
     const loaded = await loadAnalysis(parsed.analysisId);
-    const headSha = await resolveHeadCommit(loaded.repository);
+    const headSha = await resolveHeadCommit(loaded.repository, {
+      useCache: true,
+    });
 
     if (headSha === loaded.commitSha) {
       return null;

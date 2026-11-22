@@ -84,6 +84,8 @@ export function ExplanationPanel({
     onCheckStale(target);
   }, [aiConfigured, state.staleStatus, target, onCheckStale]);
 
+  const isDev = process.env.NODE_ENV !== "production";
+
   if (!aiConfigured) {
     return (
       <div className="px-3.5 py-4 text-[12px]">
@@ -92,12 +94,20 @@ export function ExplanationPanel({
             Explanations are not configured
           </p>
           <p className="mt-1.5 leading-relaxed text-muted-foreground">
-            Set <span className="font-mono text-foreground">AI_BASE_URL</span>,{" "}
-            <span className="font-mono text-foreground">AI_API_KEY</span> and{" "}
-            <span className="font-mono text-foreground">AI_MODEL</span> in{" "}
-            <span className="font-mono text-foreground">.env.local</span>. The
-            map still works without them; files convention could not identify
-            stay unclassified.
+            {isDev ? (
+              <>
+                Set{" "}
+                <span className="font-mono text-foreground">AI_BASE_URL</span>,{" "}
+                <span className="font-mono text-foreground">AI_API_KEY</span>{" "}
+                and <span className="font-mono text-foreground">AI_MODEL</span>{" "}
+                in{" "}
+                <span className="font-mono text-foreground">.env.local</span>.{" "}
+              </>
+            ) : (
+              "AI explanations are not enabled on this deployment. "
+            )}
+            The map still works without them; files convention could not
+            identify stay unclassified.
           </p>
         </div>
       </div>
@@ -141,7 +151,7 @@ export function ExplanationPanel({
             Cached
           </span>
         ) : null}
-        {!tracingConfigured ? (
+        {isDev && !tracingConfigured ? (
           <span className="rounded-full bg-well/60 px-2 py-0.5 text-[10.5px] text-muted-foreground">
             Tracing off
           </span>
@@ -192,7 +202,7 @@ export function ExplanationPanel({
         target={target}
       />
 
-      {!tracingConfigured ? (
+      {isDev && !tracingConfigured ? (
         <p className="mt-4 border-t border-hairline pt-3 text-[11px] leading-relaxed text-muted-foreground">
           Tracing is off. Set{" "}
           <span className="font-mono text-foreground">LANGSMITH_TRACING=true</span>{" "}

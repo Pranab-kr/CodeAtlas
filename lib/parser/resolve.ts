@@ -50,8 +50,9 @@ export function createConfigLoader(root: string): {
     let directory = startDirectory;
     while (directory === root || isInside(root, directory)) {
       for (const name of ["tsconfig.json", "jsconfig.json"]) {
-        const candidate = path.join(directory, name);
-        if (existsSync(candidate)) {
+        // These paths point inside a temporary extracted repository, never app files.
+        const candidate = path.join(/*turbopackIgnore: true*/ directory, name);
+        if (existsSync(/*turbopackIgnore: true*/ candidate)) {
           return candidate;
         }
       }

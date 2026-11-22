@@ -15,6 +15,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_BODY = 32_768;
 const MAX_MESSAGE = 4_000;
 const MAX_SELECTION = 1_000;
 
@@ -37,9 +38,17 @@ type Supabase = Awaited<ReturnType<typeof createServerSupabaseClient>>;
  * runtime's stream back as the small set of events the panel draws.
  */
 export async function POST(request: Request): Promise<Response> {
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) {
+    return fail(413, "The request is too large.");
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (Buffer.byteLength(raw, "utf8") > MAX_BODY) {
+      return fail(413, "The request is too large.");
+    }
+    body = JSON.parse(raw);
   } catch {
     return fail(400, "The request is not JSON.");
   }
@@ -61,7 +70,9 @@ export async function POST(request: Request): Promise<Response> {
   if (config === null) {
     return fail(
       503,
-      "The agent isn't configured. Set AGENT_URL and AGENT_ASSISTANT_ID.",
+      process.env.NODE_ENV === "production"
+        ? "Ask is not enabled on this deployment."
+        : "The agent isn't configured. Set AGENT_URL and AGENT_ASSISTANT_ID.",
     );
   }
 
@@ -285,21 +296,19 @@ async function selectionHint(
     return data ? `[Selected on the map: file ${safe(data.path)}]` : null;
   }
 
-  // A folder is a prefix of stored paths. Reject patterns so the check is a
-  // membership test, not a wildcard the caller chose.
-  if (
-    selection.path === "." ||
-    selection.path.includes("%") ||
-    selection.path.includes("_")
-  ) {
+  // A folder is a prefix of stored paths. Escape LIKE wildcards so folders
+  // with underscores (e.g. __tests__) work without letting callers inject
+  // wildcard patterns.
+  if (selection.path === "." || selection.path.includes("\\")) {
     return null;
   }
 
+  const escaped = selection.path.replace(/[%_]/g, "\\$&");
   const { data, error } = await db
     .from("files")
     .select("path")
     .eq("analysis_id", analysisId)
-    .like("path", `${selection.path}/%`)
+    .like("path", `${escaped}/%`)
     .limit(1);
 
   if (error) {

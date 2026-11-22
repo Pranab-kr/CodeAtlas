@@ -85,7 +85,10 @@ async function AnalysesList() {
     .limit(50);
 
   if (error) {
-    return <AnalysesError message={error.message} />;
+    console.error("[dashboard] failed to load analyses", error);
+    return (
+      <AnalysesError message="Could not load analyses right now. Please refresh and try again." />
+    );
   }
 
   if (analyses.length === 0) {
@@ -101,7 +104,10 @@ async function AnalysesList() {
     .in("id", projectIds);
 
   if (projectsError) {
-    return <AnalysesError message={projectsError.message} />;
+    console.error("[dashboard] failed to load projects", projectsError);
+    return (
+      <AnalysesError message="Could not load repository details right now. Please refresh and try again." />
+    );
   }
 
   const projectsById = new Map(

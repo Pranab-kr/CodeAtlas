@@ -73,7 +73,10 @@ async function AnalysisBody({ params }: Parameter) {
     .maybeSingle();
 
   if (error) {
-    return <LoadError message={error.message} />;
+    console.error("[analysis] failed to load analysis", error);
+    return (
+      <LoadError message="Could not load this analysis right now. Please refresh and try again." />
+    );
   }
   if (!analysis) {
     notFound();
@@ -86,7 +89,10 @@ async function AnalysisBody({ params }: Parameter) {
     .maybeSingle();
 
   if (projectError) {
-    return <LoadError message={projectError.message} />;
+    console.error("[analysis] failed to load project", projectError);
+    return (
+      <LoadError message="Could not load repository details right now. Please refresh and try again." />
+    );
   }
   if (!project) {
     notFound();

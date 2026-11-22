@@ -319,6 +319,7 @@ export function AskPanel({
   }, [busy]);
 
   if (!agentConfigured) {
+    const isDev = process.env.NODE_ENV !== "production";
     return (
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-surface">
         <Empty className="min-h-0 flex-1 px-5">
@@ -328,13 +329,21 @@ export function AskPanel({
           <EmptyHeader>
             <EmptyTitle className="text-[14px]">Ask is not configured</EmptyTitle>
             <EmptyDescription className="text-[12px] leading-relaxed">
-              Set <span className="font-mono text-foreground">AGENT_URL</span>{" "}
-              and{" "}
-              <span className="font-mono text-foreground">
-                AGENT_ASSISTANT_ID
-              </span>{" "}
-              in <span className="font-mono text-foreground">.env.local</span>,
-              start the agent service, and reload.
+              {isDev ? (
+                <>
+                  Set{" "}
+                  <span className="font-mono text-foreground">AGENT_URL</span>{" "}
+                  and{" "}
+                  <span className="font-mono text-foreground">
+                    AGENT_ASSISTANT_ID
+                  </span>{" "}
+                  in{" "}
+                  <span className="font-mono text-foreground">.env.local</span>,
+                  start the agent service, and reload.
+                </>
+              ) : (
+                "The repository assistant is not enabled on this deployment."
+              )}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
