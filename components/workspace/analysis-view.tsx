@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import {
@@ -39,7 +45,7 @@ import {
   type ExplanationTarget,
 } from "./explanation";
 import { RouteTable } from "./route-table";
-import { WorkspaceShell } from "./workspace-shell";
+import { useWorkspaceSidebars, WorkspaceShell } from "./workspace-shell";
 
 /**
  * Owns what the map and the pane share: which folders are open, how far each
@@ -318,21 +324,49 @@ export function AnalysisView({
       }
       map={
         <div className="flex h-full min-h-0 flex-col">
-          <div
-            role="tablist"
-            className="flex h-7 shrink-0 items-end gap-3 border-b border-border bg-card px-3 text-[11px]"
-          >
-            <CentreTab
-              label="Map"
-              on={centre === "map"}
-              onClick={() => setCentre("map")}
-            />
-            <CentreTab
-              label="Routes"
-              count={routes.length}
-              on={centre === "routes"}
-              onClick={() => setCentre("routes")}
-            />
+          <div className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-chrome/85 px-2.5">
+            <div className="flex items-center gap-2">
+              <SidebarToggle side="left" label="Roles" />
+              <div
+                role="tablist"
+                aria-label="View mode"
+                className="inline-flex items-center rounded-lg bg-well p-0.5 shadow-2xs"
+              >
+                <CentreTab
+                  label="Map"
+                  on={centre === "map"}
+                  onClick={() => setCentre("map")}
+                />
+                <CentreTab
+                  label="Routes"
+                  count={routes.length}
+                  on={centre === "routes"}
+                  onClick={() => setCentre("routes")}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {centre === "map" ? (
+                <div
+                  aria-hidden
+                  className="hidden items-center gap-3 text-[11px] text-muted-foreground sm:flex"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <span className="font-mono text-incoming">←</span>
+                    <span>imported by</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="font-mono text-outgoing">→</span>
+                    <span>imports</span>
+                  </span>
+                </div>
+              ) : null}
+              <SidebarToggle
+                side="right"
+                label={askOpen ? "Ask" : "Details"}
+              />
+            </div>
           </div>
           <div className="relative min-h-0 flex-1">
             {/* The map stays mounted under the table, so switching back keeps
@@ -411,6 +445,57 @@ export function AnalysisView({
   );
 }
 
+function SidebarToggle({
+  side,
+  label,
+}: {
+  side: "left" | "right";
+  label: string;
+}) {
+  const controls = useWorkspaceSidebars();
+  if (!controls) {
+    return null;
+  }
+
+  const collapsed =
+    side === "left" ? controls.railCollapsed : controls.detailCollapsed;
+  const onToggle =
+    side === "left" ? controls.toggleRail : controls.toggleDetail;
+  const action = collapsed
+    ? `Show ${label.toLowerCase()} sidebar`
+    : `Hide ${label.toLowerCase()} sidebar`;
+  const Icon =
+    side === "left"
+      ? collapsed
+        ? PanelLeftOpen
+        : PanelLeftClose
+      : collapsed
+        ? PanelRightOpen
+        : PanelRightClose;
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={action}
+      aria-label={action}
+      aria-pressed={!collapsed}
+      className={cn(
+        "inline-flex h-7 items-center justify-center rounded-md transition-colors",
+        collapsed
+          ? "gap-1.5 bg-well px-2 text-[11.5px] font-medium text-foreground ring-1 ring-inset ring-hairline hover:bg-surface"
+          : "w-7 text-muted-foreground hover:bg-well hover:text-foreground",
+      )}
+    >
+      {side === "left" ? <Icon className="size-3.5" aria-hidden="true" /> : null}
+      {collapsed ? <span>{label}</span> : null}
+      {side === "right" ? (
+        <Icon className="size-3.5" aria-hidden="true" />
+      ) : null}
+    </button>
+  );
+}
+
 function CentreTab({
   label,
   count,
@@ -429,15 +514,22 @@ function CentreTab({
       aria-selected={on}
       onClick={onClick}
       className={cn(
-        "-mb-px border-b pb-1.5 transition-colors",
+        "inline-flex h-6.5 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-all",
         on
-          ? "border-selection text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground",
+          ? "bg-surface text-foreground shadow-2xs"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
-      {label}
+      <span>{label}</span>
       {count !== undefined ? (
-        <span className="ml-1 font-mono text-[10px] text-muted-foreground tabular-nums">
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-px font-mono text-[10px] leading-none tabular-nums",
+            on
+              ? "bg-well text-foreground"
+              : "bg-background/60 text-muted-foreground",
+          )}
+        >
           {count}
         </span>
       ) : null}

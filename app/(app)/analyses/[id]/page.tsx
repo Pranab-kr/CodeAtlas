@@ -1,3 +1,11 @@
+import {
+  AlertCircle,
+  ChevronLeft,
+  FileCode2,
+  FolderX,
+  GitCommitHorizontal,
+  Loader2,
+} from "lucide-react";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -11,7 +19,6 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { AnalysisView } from "@/components/workspace/analysis-view";
 import { readCoverage } from "@/lib/analysis/coverage";
 import { loadMap } from "@/lib/analysis/load";
@@ -37,9 +44,12 @@ export default function AnalysisPage({ params }: Parameter) {
   return (
     <Suspense
       fallback={
-        <p className="p-4 font-mono text-[11px] text-muted-foreground">
-          Reading analysis…
-        </p>
+        <div className="flex h-full items-center justify-center bg-well/40">
+          <div className="flex items-center gap-2 rounded-full bg-surface px-3.5 py-1.5 text-[12px] text-muted-foreground shadow-xs">
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            <span>Reading analysis…</span>
+          </div>
+        </div>
       }
     >
       <AnalysisBody params={params} />
@@ -93,7 +103,7 @@ async function AnalysisBody({ params }: Parameter) {
 
     if (coverage === null) {
       return (
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col bg-well/40">
           <AnalysisBar
             projectId={analysis.project_id}
             name={project.name}
@@ -103,14 +113,21 @@ async function AnalysisBody({ params }: Parameter) {
             analysisId={analysis.id}
             rerun={false}
           />
-          <div className="mx-auto w-full max-w-2xl px-4 py-6">
-            <h2 className="text-[13px] font-medium">No stored map</h2>
-            <p className="mt-1 max-w-lg text-[11px] text-muted-foreground">
-              This analysis has no stored files, so there is nothing to draw.
-              Run it again to parse the repository.
-            </p>
-            <div className="mt-3">
-              <RerunButton analysisId={analysis.id} />
+          <div className="flex flex-1 items-center justify-center p-6">
+            <div className="atlas-window w-full max-w-md rounded-2xl bg-surface p-6 text-center">
+              <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-well text-muted-foreground shadow-2xs">
+                <FolderX className="size-4.5" aria-hidden="true" />
+              </div>
+              <h2 className="mt-4 text-[15px] font-medium tracking-[-0.01em] text-foreground">
+                No stored map
+              </h2>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+                This analysis has no stored files, so there is nothing to draw.
+                Run it again to parse the repository.
+              </p>
+              <div className="mt-5 flex justify-center">
+                <RerunButton analysisId={analysis.id} />
+              </div>
             </div>
           </div>
         </div>
@@ -131,12 +148,19 @@ async function AnalysisBody({ params }: Parameter) {
           rerun
         />
         {map.files.length === 0 ? (
-          <div className="mx-auto w-full max-w-2xl px-4 py-6">
-            <h2 className="text-[13px] font-medium">No source files</h2>
-            <p className="mt-1 max-w-lg text-[11px] text-muted-foreground">
-              The archive was parsed, but it contained no TypeScript or
-              JavaScript files to draw.
-            </p>
+          <div className="flex flex-1 items-center justify-center bg-well/40 p-6">
+            <div className="atlas-window w-full max-w-md rounded-2xl bg-surface p-6 text-center">
+              <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-well text-muted-foreground shadow-2xs">
+                <FileCode2 className="size-4.5" aria-hidden="true" />
+              </div>
+              <h2 className="mt-4 text-[15px] font-medium tracking-[-0.01em] text-foreground">
+                No source files
+              </h2>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+                The archive was parsed, but it contained no TypeScript or
+                JavaScript files to draw.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="min-h-0 flex-1">
@@ -166,8 +190,8 @@ async function AnalysisBody({ params }: Parameter) {
 
   if (analysis.status === "failed") {
     return (
-      <div className="h-full overflow-auto">
-        <div className="mx-auto w-full max-w-2xl px-4 py-5">
+      <div className="h-full overflow-auto bg-well/40">
+        <div className="mx-auto w-full max-w-2xl px-6 py-8">
           <AnalysisHeading
             projectId={analysis.project_id}
             name={project.name}
@@ -175,18 +199,24 @@ async function AnalysisBody({ params }: Parameter) {
             commit={analysis.commit_sha}
             framework={analysis.framework}
           />
-          <div className="mt-6 border border-destructive/30 bg-destructive/5 px-3 py-2">
-            <div className="flex items-center gap-2">
+          <div className="atlas-window mt-6 overflow-hidden rounded-2xl bg-surface">
+            <div className="flex items-center gap-2.5 border-b border-hairline bg-destructive/[0.06] px-5 py-3.5">
+              <AlertCircle
+                className="size-4 shrink-0 text-destructive"
+                aria-hidden="true"
+              />
               <StatusBadge status="failed" />
-              <span className="text-[11px]">
+              <span className="text-[12.5px] font-medium text-foreground">
                 Failed at {stageLabel(initial.stage)}
               </span>
             </div>
-            <p className="mt-2 font-mono text-[10.5px] whitespace-pre-wrap text-destructive">
-              {analysis.error ?? "No reason was recorded."}
-            </p>
-            <div className="mt-3">
-              <RerunButton analysisId={analysis.id} />
+            <div className="p-5">
+              <p className="rounded-lg bg-well/70 p-3 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-destructive">
+                {analysis.error ?? "No reason was recorded."}
+              </p>
+              <div className="mt-4 flex items-center gap-2">
+                <RerunButton analysisId={analysis.id} />
+              </div>
             </div>
           </div>
         </div>
@@ -195,8 +225,8 @@ async function AnalysisBody({ params }: Parameter) {
   }
 
   return (
-    <div className="h-full overflow-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-5">
+    <div className="h-full overflow-auto bg-well/40">
+      <div className="mx-auto w-full max-w-2xl px-6 py-8">
         <AnalysisHeading
           projectId={analysis.project_id}
           name={project.name}
@@ -232,18 +262,21 @@ function AnalysisBar({
   rerun: boolean;
 }) {
   return (
-    <header className="flex h-9 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
+    <header className="flex h-10 shrink-0 items-center gap-2.5 border-b border-hairline bg-surface px-3.5">
       {/* Full navigation: a live progress channel can update while a
           client-side navigation is processing the Flight stream. */}
       <a
         href="/dashboard"
-        className="text-[11px] text-muted-foreground hover:underline"
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
       >
-        Analyses
+        <ChevronLeft className="size-3.5" aria-hidden="true" />
+        <span>Analyses</span>
       </a>
-      <Separator orientation="vertical" className="h-4" />
+      <span aria-hidden className="text-[12px] text-muted-foreground/50">
+        /
+      </span>
       <span
-        className="min-w-0 truncate font-mono text-[12px]"
+        className="min-w-0 truncate font-mono text-[12.5px] font-medium text-foreground"
         title={url}
       >
         {name}
@@ -251,20 +284,21 @@ function AnalysisBar({
       {framework && framework !== "none" ? (
         <Badge
           variant="outline"
-          className="h-4 shrink-0 px-1.5 font-mono text-[10px] font-normal text-muted-foreground"
+          className="h-5 shrink-0 rounded-full px-2 font-mono text-[10.5px] font-normal text-muted-foreground"
         >
           {framework}
         </Badge>
       ) : null}
       {commit ? (
         <span
-          className="shrink-0 rounded-sm border border-border px-1 py-px font-mono text-[10px] leading-none text-muted-foreground"
+          className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-well px-1.5 font-mono text-[10.5px] leading-none text-muted-foreground shadow-2xs"
           title={commit}
         >
+          <GitCommitHorizontal className="size-3 opacity-70" aria-hidden="true" />
           {commit.slice(0, 7)}
         </span>
       ) : null}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1.5">
         {rerun ? <RerunButton analysisId={analysisId} /> : null}
         <DeleteProjectButton projectId={projectId} repository={name} />
       </div>
@@ -286,31 +320,35 @@ function AnalysisHeading({
   framework: string | null;
 }) {
   return (
-    <header>
-      <div className="flex items-center gap-2">
+    <header className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         <a
           href="/dashboard"
-          className="text-[11px] text-muted-foreground hover:underline"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 -ml-1.5 text-[12.5px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
         >
-          Analyses
+          <ChevronLeft className="size-3.5" aria-hidden="true" />
+          <span>Analyses</span>
         </a>
-        <span aria-hidden className="text-[11px] text-muted-foreground">
+        <span aria-hidden className="text-[12px] text-muted-foreground/50">
           /
         </span>
-        <h1 className="truncate font-mono text-[13px]">{name}</h1>
+        <h1 className="truncate font-mono text-[14px] font-medium text-foreground">
+          {name}
+        </h1>
         {framework && framework !== "none" ? (
           <Badge
             variant="outline"
-            className="h-4 shrink-0 px-1.5 font-mono text-[10px] font-normal text-muted-foreground"
+            className="h-5 shrink-0 rounded-full px-2 font-mono text-[10.5px] font-normal text-muted-foreground"
           >
             {framework}
           </Badge>
         ) : null}
         {commit ? (
           <span
-            className="shrink-0 rounded-sm border border-border px-1 py-px font-mono text-[10px] leading-none text-muted-foreground"
+            className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-surface px-1.5 font-mono text-[10.5px] leading-none text-muted-foreground shadow-2xs"
             title={commit}
           >
+            <GitCommitHorizontal className="size-3 opacity-70" aria-hidden="true" />
             {commit.slice(0, 7)}
           </span>
         ) : null}
@@ -318,7 +356,7 @@ function AnalysisHeading({
           <DeleteProjectButton projectId={projectId} repository={name} />
         </div>
       </div>
-      <p className="mt-0.5 font-mono text-[10.5px] text-muted-foreground">
+      <p className="truncate font-mono text-[11.5px] text-muted-foreground">
         {url}
       </p>
     </header>
@@ -327,13 +365,15 @@ function AnalysisHeading({
 
 function LoadError({ message }: { message: string }) {
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-5">
-      <Alert variant="destructive">
-        <AlertTitle>Could not read this analysis.</AlertTitle>
-        <AlertDescription className="font-mono text-[10.5px] wrap-break-word">
-          {message}
-        </AlertDescription>
-      </Alert>
+    <div className="flex h-full items-center justify-center bg-well/40 p-6">
+      <div className="w-full max-w-xl">
+        <Alert variant="destructive" className="rounded-xl bg-surface shadow-sm">
+          <AlertTitle>Could not read this analysis.</AlertTitle>
+          <AlertDescription className="font-mono text-[11.5px] wrap-break-word">
+            {message}
+          </AlertDescription>
+        </Alert>
+      </div>
     </div>
   );
 }

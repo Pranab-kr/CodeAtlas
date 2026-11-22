@@ -1,6 +1,8 @@
+import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
 
 import { startRepositoryAnalysis } from "@/app/(app)/actions";
+import { AtlasMark } from "@/components/brand/mark";
 import {
   Alert,
   AlertDescription,
@@ -16,7 +18,7 @@ interface Parameter {
 
 export default function AnalysePage({ searchParams }: Parameter) {
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
+    <main className="atlas-dot-well flex min-h-dvh items-center justify-center p-6">
       <Suspense fallback={<Starting />}>
         <Analyse searchParams={searchParams} />
       </Suspense>
@@ -29,14 +31,22 @@ async function Analyse({ searchParams }: Parameter) {
 
   if (typeof url !== "string" || url.trim() === "") {
     return (
-      <div className="w-full max-w-sm">
-        <h1 className="text-[13px] font-medium">No repository to analyse</h1>
-        <p className="mt-1 text-[12px] text-muted-foreground">
+      <div className="atlas-window w-full max-w-sm rounded-2xl p-5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-well shadow-2xs">
+            <AtlasMark className="size-4" />
+          </span>
+          <span className="text-[13.5px] font-medium">CodeAtlas</span>
+        </div>
+        <h1 className="mt-4 text-[14px] font-medium">
+          No repository to analyse
+        </h1>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
           Paste a public GitHub repository URL to start.
         </p>
         <a
           href="/dashboard"
-          className={cn(buttonVariants({ size: "sm" }), "mt-3")}
+          className={cn(buttonVariants({ size: "sm" }), "mt-4")}
         >
           Back to analyses
         </a>
@@ -51,10 +61,10 @@ async function Analyse({ searchParams }: Parameter) {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <Alert variant="destructive">
+    <div className="atlas-window w-full max-w-md rounded-2xl p-5">
+      <Alert variant="destructive" className="rounded-xl">
         <AlertTitle>Could not start the analysis.</AlertTitle>
-        <AlertDescription className="font-mono text-[10.5px] wrap-break-word">
+        <AlertDescription className="font-mono text-[11px] wrap-break-word">
           {result.error ?? "No reason was recorded."}
         </AlertDescription>
       </Alert>
@@ -62,7 +72,7 @@ async function Analyse({ searchParams }: Parameter) {
         href="/dashboard"
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
-          "mt-3",
+          "mt-4",
         )}
       >
         Back to analyses
@@ -73,8 +83,17 @@ async function Analyse({ searchParams }: Parameter) {
 
 function Starting() {
   return (
-    <p className="font-mono text-[11px] text-muted-foreground">
-      Starting the analysis…
-    </p>
+    <div className="atlas-window w-full max-w-sm rounded-2xl p-5">
+      <div className="flex items-center gap-2.5">
+        <span className="flex size-7 items-center justify-center rounded-lg bg-well shadow-2xs">
+          <AtlasMark className="size-4" />
+        </span>
+        <span className="text-[13.5px] font-medium">CodeAtlas</span>
+      </div>
+      <div className="mt-4 flex items-center gap-2 text-[12.5px] text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" />
+        <span>Starting the analysis…</span>
+      </div>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -329,12 +330,12 @@ export function DetailPane({
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex h-8 shrink-0 items-center border-b border-border bg-card px-2">
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-surface">
+      <div className="flex h-10 shrink-0 items-center border-b border-hairline bg-chrome/85 px-3">
         <div
           role="group"
           aria-label="Detail pane"
-          className="flex items-center rounded-sm border border-border p-0.5"
+          className="inline-flex items-center rounded-lg bg-well p-0.5 shadow-2xs"
         >
           <PaneTab
             label="Details"
@@ -346,7 +347,7 @@ export function DetailPane({
       </div>
       <div
         className={cn(
-          "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
+          "atlas-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
           askOpen && "hidden",
         )}
       >
@@ -420,14 +421,14 @@ function RepositorySummary({
   );
 
   return (
-    <div className="pb-3">
-      <header className="border-b border-border px-3 py-2">
-        <h2 className="font-mono text-[13px] font-semibold break-all">
+    <div className="pb-5">
+      <header className="border-b border-hairline px-3.5 py-3">
+        <h2 className="font-mono text-[13.5px] font-semibold tracking-[-0.01em] break-all text-foreground">
           {repository.name}
         </h2>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-[11.5px] text-muted-foreground">
           Framework{" "}
-          <span className="text-foreground">
+          <span className="font-medium text-foreground">
             {repository.framework === "none"
               ? "none detected"
               : repository.framework}
@@ -435,7 +436,7 @@ function RepositorySummary({
         </p>
       </header>
 
-      <dl className="grid grid-cols-3 border-b border-border">
+      <dl className="grid grid-cols-3 border-b border-hairline bg-well/35">
         <Count
           label="Files"
           value={files.length}
@@ -468,7 +469,7 @@ function RepositorySummary({
         hint="by files importing it"
         ranked={ranked.mostDependedOn}
         figure={(file) => (
-          <span className="text-incoming">←{file.fanIn}</span>
+          <span className="font-mono text-incoming">←{file.fanIn}</span>
         )}
         paths={paths}
       />
@@ -477,39 +478,49 @@ function RepositorySummary({
         hint="where reading starts"
         ranked={ranked.unimported}
         figure={(file) => (
-          <span className="text-outgoing">{file.fanOut}→</span>
+          <span className="font-mono text-outgoing">{file.fanOut}→</span>
         )}
         paths={paths}
       />
 
-      <section className="mt-3 px-3">
-        <h3 className="flex items-baseline justify-between text-[11px] text-muted-foreground">
-          <span>Unidentified by convention</span>
-          <span className="text-foreground tabular-nums">
-            {unidentified}
-          </span>
-        </h3>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {unidentified === files.length
-            ? `No framework convention identified any of these ${files.length} files. Their imports are what places them on the map.`
-            : `${files.length - unidentified} of ${files.length} files matched a framework convention; the rest are placed by their imports.`}
-        </p>
+      <section className="mt-4 px-3.5">
+        <div className="rounded-xl bg-well/50 p-3 ring-1 ring-inset ring-hairline">
+          <h3 className="flex items-baseline justify-between text-[11.5px] font-medium text-foreground">
+            <span>Unidentified by convention</span>
+            <span className="font-mono text-[11px] tabular-nums">
+              {unidentified}
+            </span>
+          </h3>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
+            {unidentified === files.length
+              ? `No framework convention identified any of these ${files.length} files. Their imports are what places them on the map.`
+              : `${files.length - unidentified} of ${files.length} files matched a framework convention; the rest are placed by their imports.`}
+          </p>
+        </div>
       </section>
 
       {/* Last and closed: this pane explains the repository first, and the
           insights are there for whoever goes looking. */}
-      <section className="mt-3 border-t border-border">
+      <section className="mt-4 border-t border-hairline">
         <button
           type="button"
           aria-expanded={insightsOpen}
           onClick={() => onInsightsOpen(!insightsOpen)}
-          className="flex w-full items-baseline gap-1.5 px-3 py-2 text-left text-[11px] hover:bg-muted/50"
+          className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[12px] transition-colors hover:bg-well/60"
         >
-          <span className="w-2 text-muted-foreground">
-            {insightsOpen ? "▾" : "▸"}
-          </span>
-          <span className="text-foreground">Insights</span>
-          <span className="text-muted-foreground">
+          {insightsOpen ? (
+            <ChevronDown
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          ) : (
+            <ChevronRight
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          )}
+          <span className="font-medium text-foreground">Insights</span>
+          <span className="text-[11.5px] text-muted-foreground">
             facts from the import graph
           </span>
         </button>
@@ -661,30 +672,42 @@ function InsightSection<T>({
   const shown = all ? items : items.slice(0, SUMMARY_LIMIT);
 
   return (
-    <section className="mt-2">
-      <h3 className="flex items-baseline gap-1.5 px-3 text-[11px] text-muted-foreground">
-        <span className="text-foreground">{title}</span>
-        {hint && <span>{hint}</span>}
-        <span className="ml-auto tabular-nums">{count}</span>
-      </h3>
-      <p className="px-3 pb-0.5 text-[11px] text-muted-foreground">
-        {sentence}
-      </p>
+    <CollapsibleSection
+      className="mt-3"
+      title={
+        <span className="block truncate text-[12px]">
+          {title}
+          {hint ? (
+            <span className="ml-1.5 font-normal text-muted-foreground">
+              {hint}
+            </span>
+          ) : null}
+        </span>
+      }
+      subtitle={sentence}
+      badge={
+        <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] font-medium text-foreground ring-1 ring-inset ring-hairline">
+          {count}
+        </span>
+      }
+    >
       {items.length === 0 ? (
-        <p className="px-3 text-[11px] text-muted-foreground">None.</p>
+        <p className="px-3 py-2.5 text-[12px] text-muted-foreground">None.</p>
       ) : (
-        <ul>{shown.map(render)}</ul>
+        <ul className="divide-y divide-hairline p-1">{shown.map(render)}</ul>
       )}
       {items.length > SUMMARY_LIMIT && (
-        <button
-          type="button"
-          onClick={() => setAll(!all)}
-          className="px-3 pt-0.5 text-[10px] text-muted-foreground tabular-nums hover:text-foreground hover:underline"
-        >
-          {all ? "Show fewer" : `Show all ${items.length}`}
-        </button>
+        <div className="border-t border-hairline bg-chrome/35 px-3 py-1.5">
+          <button
+            type="button"
+            onClick={() => setAll(!all)}
+            className="text-[11.5px] font-medium text-muted-foreground tabular-nums transition-colors hover:text-foreground hover:underline"
+          >
+            {all ? "Show fewer" : `Show all ${items.length}`}
+          </button>
+        </div>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -697,21 +720,21 @@ function CycleRows({
   paths: PathActions;
 }) {
   return (
-    <li className="mt-1">
-      <p className="px-3 text-[10px] text-muted-foreground tabular-nums">
+    <li className="py-1.5 first:pt-1 last:pb-1">
+      <p className="px-2 pb-1 text-[11px] text-muted-foreground tabular-nums">
         {cycle.files.length}{" "}
         {cycle.files.length === 1 ? "file" : "files"}
         {cycle.members > cycle.files.length &&
           `, one loop among ${cycle.members} files that all reach each other`}
       </p>
-      <ul>
+      <ul className="space-y-0.5">
         {cycle.files.map((path, index) => (
           <PathRow
             key={path}
             path={path}
             paths={paths}
             trailing={
-              <span className="text-outgoing">
+              <span className="font-mono text-outgoing">
                 {index === cycle.files.length - 1 ? "↩ first" : "↓"}
               </span>
             }
@@ -735,15 +758,15 @@ function Count({
 }) {
   return (
     <div
-      className="border-r border-border px-3 py-2 last:border-r-0"
+      className="border-r border-hairline px-3.5 py-2.5 last:border-r-0"
       title={title}
     >
-      <dt className="text-[11px] text-muted-foreground">{label}</dt>
-      <dd className="text-[15px] leading-5 tabular-nums">
+      <dt className="text-[11.5px] text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-mono text-[17px] font-semibold leading-6 text-foreground tabular-nums">
         {value ?? <span className="text-muted-foreground">—</span>}
       </dd>
       {note && (
-        <dd className="text-[10px] text-muted-foreground tabular-nums">
+        <dd className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
           {note}
         </dd>
       )}
@@ -765,16 +788,19 @@ function RankedList({
   paths: PathActions;
 }) {
   return (
-    <section className="mt-3">
-      <h3 className="flex items-baseline gap-1.5 px-3 pb-0.5 text-[11px] text-muted-foreground">
-        <span className="text-foreground">{title}</span>
-        <span>{hint}</span>
-        <span className="ml-auto tabular-nums">{ranked.total}</span>
-      </h3>
+    <CollapsibleSection
+      title={title}
+      subtitle={hint}
+      badge={
+        <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] font-medium text-foreground ring-1 ring-inset ring-hairline">
+          {ranked.total}
+        </span>
+      }
+    >
       {ranked.files.length === 0 ? (
-        <p className="px-3 text-[11px] text-muted-foreground">None.</p>
+        <p className="px-3 py-2.5 text-[12px] text-muted-foreground">None.</p>
       ) : (
-        <ul>
+        <ul className="space-y-0.5 p-1.5">
           {ranked.files.map((file) => (
             <PathRow
               key={file.path}
@@ -786,11 +812,11 @@ function RankedList({
         </ul>
       )}
       {ranked.total > ranked.files.length && (
-        <p className="px-3 pt-0.5 text-[10px] text-muted-foreground tabular-nums">
+        <p className="border-t border-hairline bg-chrome/35 px-3 py-1.5 text-[11px] text-muted-foreground tabular-nums">
           {ranked.total - ranked.files.length} more not listed
         </p>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -834,11 +860,16 @@ function Selected({
   children: ReactNode;
 }) {
   return (
-    <div className="pb-3">
-      <header className="border-b border-border px-3 pt-2">
-        <p className="text-[10px] text-muted-foreground">{caption}</p>
-        <h2 className="leading-4">{title}</h2>
-        <div role="tablist" className="mt-2 flex gap-3 text-[11px]">
+    <div className="pb-6">
+      <header className="border-b border-hairline bg-chrome/35 px-3.5 pt-3.5 pb-3">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">
+          {caption}
+        </p>
+        <h2 className="mt-1 leading-5 text-foreground">{title}</h2>
+        <div
+          role="tablist"
+          className="mt-3 inline-flex items-center rounded-lg bg-well p-0.5 shadow-2xs"
+        >
           <TabButton
             tab="structure"
             label="Structure"
@@ -894,10 +925,10 @@ function TabButton({
       aria-selected={active}
       onClick={() => onTab(tab)}
       className={cn(
-        "-mb-px border-b pb-1.5",
+        "h-6.5 rounded-md px-3 text-[12px] font-medium transition-all",
         active
-          ? "border-selection text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground",
+          ? "bg-surface text-foreground shadow-2xs"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
       {label}
@@ -921,14 +952,16 @@ function PathTitle({
       onClick={() => paths.onReveal(path)}
       onMouseEnter={() => paths.onHover({ kind: "file", path })}
       onMouseLeave={() => paths.onHover(null)}
-      className="text-left font-mono text-[12px] break-all hover:underline"
+      className="text-left font-mono text-[13px] leading-snug break-all hover:underline"
     >
       {slash >= 0 && (
         <span className="text-muted-foreground">
           {path.slice(0, slash + 1)}
         </span>
       )}
-      <span className="font-semibold">{path.slice(slash + 1)}</span>
+      <span className="font-semibold text-foreground">
+        {path.slice(slash + 1)}
+      </span>
     </button>
   );
 }
@@ -966,60 +999,83 @@ function FileStructure({
 
   return (
     <>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-b border-border px-3 py-2 text-[11px]">
-        <Fact label="Kind">
-          <span className="flex items-center gap-1.5 font-mono">
-            <KindSwatch kind={kind} />
-            {kindLabel(kind)}
-          </span>
-        </Fact>
-        <Fact label="Folder">
-          <span className="font-mono break-all">{file.folder}</span>
-        </Fact>
-        <Fact label="Length">
-          {file.lines} {file.lines === 1 ? "line" : "lines"}
-        </Fact>
-        <Fact label="Exports">
-          {file.exports === null ? (
-            <span className="text-muted-foreground">
-              not recorded; run the analysis again
+      <div className="px-3.5 pt-3.5">
+        <dl className="divide-y divide-hairline overflow-hidden rounded-xl bg-well/45 text-[12px] ring-1 ring-inset ring-hairline">
+          <Fact label="Kind">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[12px]">
+              <KindSwatch kind={kind} />
+              {kindLabel(kind)}
             </span>
-          ) : file.exports.length === 0 ? (
-            <span className="text-muted-foreground">
-              nothing named in this file
+          </Fact>
+          <Fact label="Folder">
+            <span className="font-mono text-[12px] break-all">
+              {file.folder}
             </span>
-          ) : (
-            <span className="font-mono break-all">
-              {file.exports.join(", ")}
-            </span>
-          )}
-        </Fact>
-        <Fact label="Depends on">
-          <span className="text-outgoing">{imports.length}</span>{" "}
-          {imports.length === 1 ? "file" : "files"}
-        </Fact>
-        <Fact label="Depended on by">
-          <span className="text-incoming">{importedBy.length}</span>{" "}
-          {importedBy.length === 1 ? "file" : "files"}
-        </Fact>
-      </dl>
-
-      <div className="flex gap-1.5 border-b border-border px-3 py-2">
-        <WalkButton
-          direction="dependents"
-          label="Blast radius"
-          walk={walk}
-          onWalk={onWalk}
-        />
-        <WalkButton
-          direction="dependencies"
-          label="Dependency chain"
-          walk={walk}
-          onWalk={onWalk}
-        />
+          </Fact>
+          <Fact label="Length">
+            {file.lines} {file.lines === 1 ? "line" : "lines"}
+          </Fact>
+          <Fact label="Exports">
+            {file.exports === null ? (
+              <span className="text-muted-foreground">
+                not recorded; run the analysis again
+              </span>
+            ) : file.exports.length === 0 ? (
+              <span className="text-muted-foreground">
+                nothing named in this file
+              </span>
+            ) : (
+              <span className="flex flex-wrap gap-1">
+                {file.exports.map((name) => (
+                  <span
+                    key={name}
+                    className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-inset ring-hairline"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </span>
+            )}
+          </Fact>
+          <Fact label="Depends on">
+            <span className="font-mono font-medium text-outgoing">
+              {imports.length}
+            </span>{" "}
+            {imports.length === 1 ? "file" : "files"}
+          </Fact>
+          <Fact label="Depended on by">
+            <span className="font-mono font-medium text-incoming">
+              {importedBy.length}
+            </span>{" "}
+            {importedBy.length === 1 ? "file" : "files"}
+          </Fact>
+        </dl>
       </div>
+
+      <div className="mt-3.5 px-3.5">
+        <div className="grid grid-cols-2 gap-2">
+          <WalkButton
+            direction="dependents"
+            label="Blast radius"
+            cue="←"
+            cueTone="text-incoming"
+            walk={walk}
+            onWalk={onWalk}
+          />
+          <WalkButton
+            direction="dependencies"
+            label="Dependency chain"
+            cue="→"
+            cueTone="text-outgoing"
+            walk={walk}
+            onWalk={onWalk}
+          />
+        </div>
+      </div>
+
       {walk && (
         <ReachList
+          key={`${file.path}:${walk}`}
           file={file.path}
           graph={graph}
           direction={walk}
@@ -1030,14 +1086,22 @@ function FileStructure({
 
       <NeighbourList
         title="Imports"
-        count={<span className="text-outgoing">{imports.length}→</span>}
+        subtitle="Direct dependencies of this file"
+        count={
+          <span className="rounded-full bg-outgoing/14 px-2 py-0.5 font-mono text-[11px] font-medium text-outgoing">
+            {imports.length}→
+          </span>
+        }
         rows={imports}
         paths={paths}
       />
       <NeighbourList
         title="Imported by"
+        subtitle="Files that directly import this file"
         count={
-          <span className="text-incoming">←{importedBy.length}</span>
+          <span className="rounded-full bg-incoming/14 px-2 py-0.5 font-mono text-[11px] font-medium text-incoming">
+            ←{importedBy.length}
+          </span>
         }
         rows={importedBy}
         paths={paths}
@@ -1049,11 +1113,15 @@ function FileStructure({
 function WalkButton({
   direction,
   label,
+  cue,
+  cueTone,
   walk,
   onWalk,
 }: {
   direction: Direction;
   label: string;
+  cue: string;
+  cueTone: string;
   walk: Direction | null;
   onWalk(walk: Direction | null): void;
 }) {
@@ -1064,13 +1132,16 @@ function WalkButton({
       aria-pressed={on}
       onClick={() => onWalk(on ? null : direction)}
       className={cn(
-        "rounded-sm border px-2 py-0.5 text-[11px]",
+        "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium transition-all",
         on
-          ? "border-selection bg-selection/15 text-foreground"
-          : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          ? "bg-selection/18 text-foreground shadow-2xs ring-1 ring-inset ring-selection/55"
+          : "bg-well text-foreground/80 ring-1 ring-inset ring-hairline-strong hover:bg-raised hover:text-foreground",
       )}
     >
-      {label}
+      <span aria-hidden className={cn("font-mono text-[11px]", cueTone)}>
+        {cue}
+      </span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }
@@ -1100,56 +1171,95 @@ function ReachList({
   const dependents = direction === "dependents";
 
   return (
-    <section className="mt-3">
-      <h3 className="flex items-baseline gap-1.5 px-3 pb-0.5 text-[11px] text-muted-foreground">
-        <span className="text-foreground">
-          {dependents ? "Blast radius" : "Dependency chain"}
-        </span>
-        <span>
-          {dependents
-            ? "what imports this, directly or through others"
-            : "what this imports, directly or through others"}
-        </span>
+    <CollapsibleSection
+      emphasized
+      title={dependents ? "Blast radius" : "Dependency chain"}
+      subtitle={
+        dependents
+          ? "What imports this, directly or through others"
+          : "What this imports, directly or through others"
+      }
+      badge={
         <span
           className={cn(
-            "ml-auto tabular-nums",
-            dependents ? "text-incoming" : "text-outgoing",
+            "rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold",
+            dependents
+              ? "bg-incoming/15 text-incoming"
+              : "bg-outgoing/15 text-outgoing",
           )}
         >
           {total}
         </span>
-      </h3>
-      {steps.map((step, index) => (
-        <div key={index}>
-          <h4 className="px-3 pt-1 text-[10px] text-muted-foreground tabular-nums">
-            {index + 1} {index === 0 ? "step" : "steps"} away ·{" "}
-            {step.length}
-          </h4>
-          {step.length === 0 ? (
-            <p className="px-3 text-[11px] text-muted-foreground">
-              None.
-            </p>
-          ) : (
-            <ul>
-              {step.map((path) => (
-                <PathRow key={path} path={path} paths={paths} />
-              ))}
-            </ul>
-          )}
-        </div>
-      ))}
-      <p className="px-3 pt-1 text-[10px] text-muted-foreground tabular-nums">
-        {beyond > 0
-          ? `${beyond} more further than ${DEFAULT_DEPTH} steps, not listed.`
-          : `Nothing further than ${DEFAULT_DEPTH} steps.`}
-      </p>
-      {types.size > 0 && (
-        <p className="px-3 pt-0.5 text-[10px] text-muted-foreground">
-          Only the selected types are listed; the walk still passes through
-          the rest.
+      }
+    >
+      <div className="divide-y divide-hairline">
+        {steps.map((step, index) => (
+          <ReachStep key={index} index={index} step={step} paths={paths} />
+        ))}
+      </div>
+
+      <div className="border-t border-hairline bg-chrome/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="tabular-nums">
+          {beyond > 0
+            ? `${beyond} more further than ${DEFAULT_DEPTH} steps, not listed.`
+            : `Nothing further than ${DEFAULT_DEPTH} steps.`}
         </p>
-      )}
-    </section>
+        {types.size > 0 && (
+          <p className="mt-0.5">
+            Only the selected types are listed; the walk still passes through
+            the rest.
+          </p>
+        )}
+      </div>
+    </CollapsibleSection>
+  );
+}
+
+function ReachStep({
+  index,
+  step,
+  paths,
+}: {
+  index: number;
+  step: readonly string[];
+  paths: PathActions;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-2 bg-well/65 px-3 py-1.5 text-left text-[11px] transition-colors hover:bg-well"
+      >
+        <span className="flex items-center gap-1.5 font-medium text-foreground/85">
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              "size-3 shrink-0 text-muted-foreground transition-transform duration-150",
+              !open && "-rotate-90",
+            )}
+          />
+          {index + 1} {index === 0 ? "step" : "steps"} away
+        </span>
+        <span className="font-mono text-muted-foreground tabular-nums">
+          {step.length} {step.length === 1 ? "file" : "files"}
+        </span>
+      </button>
+      {open ? (
+        step.length === 0 ? (
+          <p className="px-3 py-2 text-[12px] text-muted-foreground">None.</p>
+        ) : (
+          <ul className="space-y-0.5 p-1.5">
+            {step.map((path) => (
+              <PathRow key={path} path={path} paths={paths} />
+            ))}
+          </ul>
+        )
+      ) : null}
+    </div>
   );
 }
 
@@ -1161,34 +1271,34 @@ function Fact({
   children: ReactNode;
 }) {
   return (
-    <>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 tabular-nums">{children}</dd>
-    </>
+    <div className="grid grid-cols-[108px_1fr] items-baseline gap-x-3 px-3 py-2">
+      <dt className="text-[11.5px] text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-[12px] text-foreground tabular-nums">
+        {children}
+      </dd>
+    </div>
   );
 }
 
 function NeighbourList({
   title,
+  subtitle,
   count,
   rows,
   paths,
 }: {
   title: string;
+  subtitle?: string;
   count: ReactNode;
   rows: readonly Neighbour[];
   paths: PathActions;
 }) {
   return (
-    <section className="mt-3">
-      <h3 className="flex items-baseline justify-between px-3 pb-0.5 text-[11px]">
-        <span>{title}</span>
-        <span className="tabular-nums">{count}</span>
-      </h3>
+    <CollapsibleSection title={title} subtitle={subtitle} badge={count}>
       {rows.length === 0 ? (
-        <p className="px-3 text-[11px] text-muted-foreground">None.</p>
+        <p className="px-3 py-2.5 text-[12px] text-muted-foreground">None.</p>
       ) : (
-        <ul>
+        <ul className="space-y-0.5 p-1.5">
           {rows.map((row) => (
             <PathRow
               key={row.path}
@@ -1199,7 +1309,7 @@ function NeighbourList({
           ))}
         </ul>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -1218,7 +1328,9 @@ function EdgeMarks({ kinds }: { kinds: readonly EdgeKind[] }) {
     return null;
   }
   return (
-    <span className="text-muted-foreground">{marks.join(" · ")}</span>
+    <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10.5px] text-muted-foreground ring-1 ring-inset ring-hairline">
+      {marks.join(" · ")}
+    </span>
   );
 }
 
@@ -1241,54 +1353,135 @@ function FolderStructure({
 
   return (
     <>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-b border-border px-3 py-2 text-[11px]">
-        <Fact label="Files">{group.files.length}</Fact>
-        <Fact label="Imported from outside by">
-          <span className="text-incoming">{group.fanIn}</span>{" "}
-          {group.fanIn === 1 ? "file" : "files"}
-        </Fact>
-        <Fact label="Imports from outside">
-          <span className="text-outgoing">{group.fanOut}</span>{" "}
-          {group.fanOut === 1 ? "file" : "files"}
-        </Fact>
-      </dl>
+      <div className="px-3.5 pt-3.5">
+        <dl className="divide-y divide-hairline overflow-hidden rounded-xl bg-well/45 text-[12px] ring-1 ring-inset ring-hairline">
+          <Fact label="Files">{group.files.length}</Fact>
+          <Fact label="Imported by">
+            <span className="font-mono font-medium text-incoming">
+              {group.fanIn}
+            </span>{" "}
+            {group.fanIn === 1 ? "file" : "files"} outside
+          </Fact>
+          <Fact label="Imports">
+            <span className="font-mono font-medium text-outgoing">
+              {group.fanOut}
+            </span>{" "}
+            {group.fanOut === 1 ? "file" : "files"} outside
+          </Fact>
+        </dl>
+      </div>
 
-      <section className="mt-3">
-        <h3 className="px-3 pb-0.5 text-[11px]">
-          Kinds of file inside
-        </h3>
-        <ul>
+      <CollapsibleSection
+        title="Kinds of file inside"
+        badge={
+          <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] font-medium text-foreground ring-1 ring-inset ring-hairline">
+            {kinds.length}
+          </span>
+        }
+      >
+        <ul className="space-y-0.5 p-1.5">
           {kinds.length === 0 && (
-            <li className="px-3 text-[11px] text-muted-foreground">
+            <li className="px-2 py-1.5 text-[12px] text-muted-foreground">
               None.
             </li>
           )}
           {kinds.map(({ kind, count }) => (
             <li
               key={kind}
-              className="flex h-[22px] items-center gap-2 px-3 text-[11px]"
+              className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-[12px]"
             >
               <KindSwatch kind={kind} />
-              <span className="flex-1 font-mono">{kindLabel(kind)}</span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="flex-1 font-mono text-foreground">
+                {kindLabel(kind)}
+              </span>
+              <span className="font-mono text-[11.5px] text-muted-foreground tabular-nums">
                 {count}
               </span>
             </li>
           ))}
         </ul>
-      </section>
+      </CollapsibleSection>
     </>
   );
 }
 
 // ── Shared ───────────────────────────────────────────────────────────────────
 
+function CollapsibleSection({
+  title,
+  subtitle,
+  badge,
+  emphasized = false,
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  emphasized?: boolean;
+  defaultOpen?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <section
+      className={cn(
+        "mx-3.5 mt-3.5 overflow-hidden rounded-xl ring-1 ring-inset",
+        emphasized
+          ? "bg-well/50 ring-hairline-strong"
+          : "bg-well/45 ring-hairline",
+        className,
+      )}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex w-full items-start justify-between gap-2 px-3 py-2 text-left transition-colors",
+          emphasized
+            ? "bg-chrome/70 py-2.5 hover:bg-chrome/95"
+            : "bg-chrome/55 hover:bg-chrome/80",
+          open && "border-b border-hairline",
+        )}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              "mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform duration-150",
+              !open && "-rotate-90",
+            )}
+          />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[12.5px] font-semibold text-foreground">
+              {title}
+            </h3>
+            {subtitle ? (
+              <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        {badge ? (
+          <span className="shrink-0 tabular-nums">{badge}</span>
+        ) : null}
+      </button>
+      {open ? children : null}
+    </section>
+  );
+}
+
 function KindSwatch({ kind }: { kind: string }) {
   const tone = kindTone(kind);
   return (
     <span
       aria-hidden
-      className="size-[8px] shrink-0 rounded-xs"
+      className="size-2 shrink-0 rounded-[2px]"
       style={{
         backgroundColor:
           tone === null
@@ -1313,6 +1506,7 @@ function PathRow({
 }) {
   const slash = path.lastIndexOf("/");
   const hovered = paths.isHovered(path);
+  const kind = kindOfPath(path);
   return (
     <li>
       <button
@@ -1322,22 +1516,25 @@ function PathRow({
         onMouseEnter={() => paths.onHover({ kind: "file", path })}
         onMouseLeave={() => paths.onHover(null)}
         className={cn(
-          "flex h-[22px] w-full min-w-0 items-center gap-2 px-3 text-left text-[11px] transition-colors",
+          "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
           hovered
-            ? "bg-selection/15 shadow-[inset_2px_0_0_var(--selection)]"
-            : "hover:bg-muted/50",
+            ? "bg-selection/18 text-foreground ring-1 ring-inset ring-selection/45"
+            : "hover:bg-surface/85",
         )}
       >
-        <span className="flex min-w-0 flex-1 overflow-hidden font-mono">
+        <KindSwatch kind={kind} />
+        <span className="flex min-w-0 flex-1 items-baseline overflow-hidden font-mono">
           {slash >= 0 && (
-            <span className="truncate text-muted-foreground">
+            <span className="truncate text-[11.5px] text-muted-foreground">
               {path.slice(0, slash + 1)}
             </span>
           )}
-          <span className="truncate">{path.slice(slash + 1)}</span>
+          <span className="shrink-0 truncate text-[12px] font-medium text-foreground">
+            {path.slice(slash + 1)}
+          </span>
         </span>
         {trailing ? (
-          <span className="shrink-0 text-[10px] tabular-nums">
+          <span className="shrink-0 text-[11px] tabular-nums">
             {trailing}
           </span>
         ) : null}
@@ -1365,9 +1562,9 @@ function PaneTab({
       aria-pressed={on}
       onClick={onClick}
       className={cn(
-        "h-5 rounded-[3px] px-2 text-[10.5px] transition-colors",
+        "h-6.5 rounded-md px-2.5 text-[12px] font-medium transition-all",
         on
-          ? "bg-muted text-foreground"
+          ? "bg-surface text-foreground shadow-2xs"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, Check, Circle, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAnalysisProgress } from "@/hooks/use-analysis-progress";
@@ -10,32 +11,52 @@ import {
   STAGES,
   type Progress,
 } from "@/lib/pipeline/stages";
+import { cn } from "@/lib/utils";
 
 import { RerunButton } from "./rerun-button";
 
 type Step = "done" | "current" | "failed" | "stale" | "pending";
 
-const MARKS: Record<Step, string> = {
-  done: "✓",
-  current: "›",
-  failed: "×",
-  stale: "!",
-  pending: "·",
-};
-
-const MARK_STYLES: Record<Step, string> = {
-  done: "text-muted-foreground",
-  current: "text-foreground",
-  failed: "text-destructive",
-  stale: "text-muted-foreground",
-  pending: "text-border",
-};
+function StepIcon({ step }: { step: Step }) {
+  switch (step) {
+    case "done":
+      return (
+        <span className="flex size-5 items-center justify-center rounded-full bg-incoming/15 text-incoming">
+          <Check className="size-3" />
+        </span>
+      );
+    case "current":
+      return (
+        <span className="flex size-5 items-center justify-center rounded-full bg-selection/15 text-selection">
+          <Loader2 className="size-3 animate-spin" />
+        </span>
+      );
+    case "failed":
+      return (
+        <span className="flex size-5 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+          <X className="size-3" />
+        </span>
+      );
+    case "stale":
+      return (
+        <span className="flex size-5 items-center justify-center rounded-full bg-outgoing/15 text-outgoing">
+          <AlertTriangle className="size-3" />
+        </span>
+      );
+    default:
+      return (
+        <span className="flex size-5 items-center justify-center rounded-full bg-well text-muted-foreground/45">
+          <Circle className="size-2 fill-current" />
+        </span>
+      );
+  }
+}
 
 const LABEL_STYLES: Record<Step, string> = {
   done: "text-muted-foreground",
-  current: "text-foreground",
-  failed: "text-destructive",
-  stale: "text-foreground",
+  current: "font-medium text-foreground",
+  failed: "font-medium text-destructive",
+  stale: "font-medium text-foreground",
   pending: "text-muted-foreground/60",
 };
 
@@ -113,106 +134,115 @@ export function ProgressView({
   const percent = Math.round((reached / STAGES.length) * 100);
 
   return (
-    <section className="mt-6 max-w-xl">
-      <h2 className="text-[13px] font-medium">Mapping this repository</h2>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">
-        The map appears when every stage is done. Each stage moves as the run
-        reaches it.
-      </p>
+    <section className="atlas-window mt-6 max-w-2xl overflow-hidden rounded-2xl">
+      <div className="border-b border-hairline bg-chrome/70 px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-[14.5px] font-medium">
+              Mapping this repository
+            </h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              The map appears automatically once every stage finishes.
+            </p>
+          </div>
+          <span className="rounded-full bg-well px-2.5 py-0.5 font-mono text-[11.5px] font-medium tabular-nums">
+            {percent}%
+          </span>
+        </div>
 
-      <div
-        role="progressbar"
-        aria-label="Mapping stages complete"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        className="mt-5 h-px w-full overflow-hidden bg-border"
-      >
         <div
-          className="h-full bg-foreground transition-[width] duration-700 ease-out"
-          style={{ width: `${percent}%` }}
-        />
+          role="progressbar"
+          aria-label="Mapping stages complete"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-well"
+        >
+          <div
+            className={cn(
+              "h-full rounded-full transition-[width] duration-700 ease-out",
+              progress.status === "failed" ? "bg-destructive" : "bg-selection",
+            )}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
       </div>
 
-      <ol className="mt-3 border-t border-border">
-        {STAGES.map((entry, index) => {
-          const step = stepAt(index, progress, stale);
-          const detail =
-            step === "current" || step === "failed" || step === "stale"
-              ? progress.message
-              : null;
+      <div className="p-5">
+        <ol className="divide-y divide-hairline">
+          {STAGES.map((entry, index) => {
+            const step = stepAt(index, progress, stale);
+            const detail =
+              step === "current" || step === "failed" || step === "stale"
+                ? progress.message
+                : null;
 
-          return (
-            <li
-              key={entry.stage}
-              className="grid grid-cols-[1rem_7.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-b border-border/60 py-1.5"
-            >
-              <span
-                aria-hidden
-                title={step}
-                className={`inline-block font-mono text-[12px] ${MARK_STYLES[step]} ${step === "current" ? "atlas-live" : ""}`}
+            return (
+              <li
+                key={entry.stage}
+                className="grid grid-cols-[1.5rem_8.5rem_minmax(0,1fr)] items-center gap-x-3 py-2.5"
               >
-                {MARKS[step]}
-              </span>
-              <span
-                className={`font-mono text-[11px] ${LABEL_STYLES[step]}`}
-              >
-                {entry.label}
-              </span>
-              <span className="min-w-0 text-[11px] break-words text-muted-foreground">
-                {detail}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+                <span aria-hidden title={step}>
+                  <StepIcon step={step} />
+                </span>
+                <span className={cn("text-[12.5px]", LABEL_STYLES[step])}>
+                  {entry.label}
+                </span>
+                <span className="min-w-0 text-[12px] break-words text-muted-foreground">
+                  {detail}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
 
-      {progress.stage === null && progress.message ? (
-        <p className="mt-3 font-mono text-[10.5px] text-muted-foreground">
-          {progress.message}
-        </p>
-      ) : null}
+        {progress.stage === null && progress.message ? (
+          <p className="mt-3 rounded-lg bg-well/60 px-3 py-2 font-mono text-[11.5px] text-muted-foreground">
+            {progress.message}
+          </p>
+        ) : null}
 
-      {progress.status === "failed" ? (
-        <div className="mt-4 border border-destructive/30 bg-destructive/5 px-3 py-2">
-          <p className="text-[11px] font-medium text-destructive">
-            Failed at {stageLabel(progress.stage)}
-          </p>
-          <p className="mt-1 font-mono text-[10.5px] whitespace-pre-wrap text-destructive">
-            {progress.message ?? "No reason was recorded."}
-          </p>
-          <div className="mt-2">
-            <RerunButton
-              analysisId={analysisId}
-              onStart={() => setRestarting(true)}
-              onError={rerunFailed}
-            />
+        {progress.status === "failed" ? (
+          <div className="mt-4 rounded-xl border border-destructive/25 bg-destructive/8 p-4">
+            <p className="text-[12.5px] font-medium text-destructive">
+              Failed at {stageLabel(progress.stage)}
+            </p>
+            <p className="mt-1 font-mono text-[11.5px] whitespace-pre-wrap text-destructive/90">
+              {progress.message ?? "No reason was recorded."}
+            </p>
+            <div className="mt-3">
+              <RerunButton
+                analysisId={analysisId}
+                onStart={() => setRestarting(true)}
+                onError={rerunFailed}
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {stale && progress.status !== "failed" ? (
-        <div className="mt-4 border border-dashed border-border bg-muted/30 px-3 py-2">
-          <p className="text-[11px]">
-            This run stopped reporting over 5 minutes ago, so it was abandoned
-            rather than still working.
-          </p>
-          <div className="mt-2">
-            <RerunButton
-              analysisId={analysisId}
-              onStart={() => setRestarting(true)}
-              onError={rerunFailed}
-            />
+        {stale && progress.status !== "failed" ? (
+          <div className="mt-4 rounded-xl border border-hairline-strong bg-well/60 p-4">
+            <p className="text-[12.5px] text-foreground">
+              This run stopped reporting over 5 minutes ago, so it was abandoned
+              rather than still working.
+            </p>
+            <div className="mt-3">
+              <RerunButton
+                analysisId={analysisId}
+                onStart={() => setRestarting(true)}
+                onError={rerunFailed}
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {lost ? (
-        <p className="mt-4 font-mono text-[10.5px] text-muted-foreground">
-          Live updates stopped ({lost}). Reload the page to read the run&apos;s
-          current state.
-        </p>
-      ) : null}
+        {lost ? (
+          <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+            Live updates stopped ({lost}). Reload the page to read the
+            run&apos;s current state.
+          </p>
+        ) : null}
+      </div>
     </section>
   );
 }

@@ -9,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
+  { href: "#inside", label: "Workspace" },
   { href: "#what", label: "What it draws" },
   { href: "#how", label: "How it works" },
   { href: "#frameworks", label: "Frameworks" },
@@ -30,29 +31,33 @@ export function SiteHeader({ signInUrl }: { signInUrl: string }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b bg-background transition-[border-color] duration-200",
-        scrolled ? "border-border" : "border-transparent",
+        "sticky top-0 z-40 border-b transition-[border-color,background-color,backdrop-filter] duration-200",
+        scrolled
+          ? "border-hairline bg-background/85 backdrop-blur-md"
+          : "border-transparent bg-transparent",
       )}
     >
-      <div className="mx-auto flex h-14 w-full max-w-[1140px] items-center gap-8 px-6">
+      <div className="mx-auto flex h-14 w-full max-w-[1160px] items-center gap-8 px-6">
         <Link
           href="/"
-          className="group flex shrink-0 items-center gap-2 text-[13px] font-medium tracking-tight"
+          className="group flex shrink-0 items-center gap-2 text-[13.5px] font-medium tracking-[-0.015em]"
           aria-label="CodeAtlas home"
         >
-          <AtlasMark className="size-[18px] transition-opacity duration-200 group-hover:opacity-60" />
-          CodeAtlas
+          <span className="flex size-7 items-center justify-center rounded-lg bg-surface shadow-2xs transition-transform duration-150 group-hover:scale-[1.03]">
+            <AtlasMark className="size-4" />
+          </span>
+          <span>CodeAtlas</span>
         </Link>
 
         <nav
           aria-label="Sections"
-          className="hidden items-center gap-6 text-[12px] text-muted-foreground md:flex"
+          className="hidden items-center gap-1 text-[12.5px] text-muted-foreground md:flex"
         >
           {LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="relative py-1 transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-foreground after:transition-transform after:duration-200 hover:text-foreground hover:after:scale-x-100 focus-visible:text-foreground focus-visible:after:scale-x-100"
+              className="rounded-lg px-2.5 py-1.5 transition-colors hover:bg-foreground/[0.05] hover:text-foreground focus-visible:text-foreground"
             >
               {link.label}
             </a>
@@ -66,7 +71,7 @@ export function SiteHeader({ signInUrl }: { signInUrl: string }) {
             className={buttonVariants({
               variant: "outline",
               size: "sm",
-              className: "border-border",
+              className: "px-3",
             })}
           >
             Sign in

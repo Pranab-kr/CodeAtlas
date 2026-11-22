@@ -1,9 +1,12 @@
 "use client";
 
 import {
+  ArrowRight,
+  ArrowUp,
   CheckIcon,
-  CircleDotIcon,
   InfoIcon,
+  Loader2,
+  RotateCcw,
   SearchIcon,
   SettingsIcon,
   XIcon,
@@ -16,8 +19,6 @@ import {
 } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { Button } from "@/components/ui/button";
 import { CodeBlock, CodeBlockContent } from "@/components/ui/code-block";
 import {
   Empty,
@@ -27,19 +28,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupTextarea,
-} from "@/components/ui/input-group";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
-import {
-  Message,
-  MessageContent,
-  MessageFooter,
-  MessageHeader,
-} from "@/components/ui/message";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -62,6 +51,7 @@ import { parseSse } from "@/lib/agent/sse";
 import type { AskEvent } from "@/lib/agent/stream";
 import type { Selection } from "@/lib/graph/selection";
 import type { ParsedFile } from "@/lib/parser/types";
+import { cn } from "@/lib/utils";
 
 import { ExplanationBody } from "./explanation";
 
@@ -330,22 +320,27 @@ export function AskPanel({
 
   if (!agentConfigured) {
     return (
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
-        <Empty className="min-h-0 flex-1">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-surface">
+        <Empty className="min-h-0 flex-1 px-5">
           <EmptyMedia variant="icon">
-            <SettingsIcon />
+            <SettingsIcon className="size-4" />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle>Ask is not configured</EmptyTitle>
-            <EmptyDescription>
-              Set <span className="font-mono">AGENT_URL</span> and{" "}
-              <span className="font-mono">AGENT_ASSISTANT_ID</span> in{" "}
-              <span className="font-mono">.env.local</span>, start the
-              agent service, and reload.
+            <EmptyTitle className="text-[14px]">Ask is not configured</EmptyTitle>
+            <EmptyDescription className="text-[12px] leading-relaxed">
+              Set <span className="font-mono text-foreground">AGENT_URL</span>{" "}
+              and{" "}
+              <span className="font-mono text-foreground">
+                AGENT_ASSISTANT_ID
+              </span>{" "}
+              in <span className="font-mono text-foreground">.env.local</span>,
+              start the agent service, and reload.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <p>The map, blast radius and explanations work without it.</p>
+            <p className="text-[11.5px] text-muted-foreground">
+              The map, blast radius and explanations work without it.
+            </p>
           </EmptyContent>
         </Empty>
       </div>
@@ -353,58 +348,62 @@ export function AskPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
-      <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border px-3 text-[10px] text-muted-foreground">
-        <span>
-          {context === null
-            ? "whole repository"
-            : `${context.kind === "file" ? "file" : "folder"} context`}
-        </span>
-        <Button
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-surface">
+      <div className="flex h-8 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-chrome/50 px-3.5 text-[11px] text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0">Scope</span>
+          <span className="truncate rounded-md bg-well px-1.5 py-0.5 font-mono text-[10.5px] text-foreground">
+            {context === null
+              ? "whole repository"
+              : `${context.kind === "file" ? "file" : "folder"} · ${context.path}`}
+          </span>
+        </div>
+        <button
           type="button"
-          variant="ghost"
-          size="xs"
-          className="ml-auto text-[10px]"
           onClick={reset}
           disabled={busy || turns.length === 0}
+          className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-well hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
         >
-          New
-        </Button>
+          <RotateCcw className="size-3" aria-hidden="true" />
+          <span>New</span>
+        </button>
       </div>
 
       <div className="min-h-0 min-w-0 flex-1">
         <MessageScrollerProvider autoScroll>
           <MessageScroller className="min-h-0">
-            <MessageScrollerViewport>
-              <MessageScrollerContent className="gap-4 p-3">
+            <MessageScrollerViewport className="atlas-scroll">
+              <MessageScrollerContent className="gap-5 px-3.5 py-4">
                 {turns.length === 0 ? (
-                  <MessageScrollerItem className="flex min-h-full flex-1">
-                    <Empty className="min-h-full">
-                      <EmptyMedia variant="icon">
-                        <SearchIcon />
-                      </EmptyMedia>
-                      <EmptyHeader>
-                        <EmptyTitle>Ask the map</EmptyTitle>
-                        <EmptyDescription>
-                          Every answer is looked up in the parsed files and
-                          edges; nothing is recalled.
-                        </EmptyDescription>
-                      </EmptyHeader>
-                      <EmptyContent>
+                  <MessageScrollerItem className="flex min-h-full flex-1 flex-col justify-center">
+                    <div className="mx-auto w-full max-w-sm py-4">
+                      <div className="flex size-9 items-center justify-center rounded-xl bg-well text-foreground shadow-2xs">
+                        <SearchIcon className="size-4" aria-hidden="true" />
+                      </div>
+                      <h2 className="mt-3.5 text-[15px] font-medium tracking-[-0.01em] text-foreground">
+                        Ask the map
+                      </h2>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+                        Every answer is looked up in the parsed files and edges;
+                        nothing is recalled.
+                      </p>
+                      <div className="mt-4 grid gap-1.5">
                         {EXAMPLES.map((example) => (
-                          <Button
+                          <button
                             key={example}
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-auto w-full justify-start px-2 py-1.5 text-left text-[11px] whitespace-normal"
                             onClick={() => void send(example)}
+                            className="group flex w-full items-center justify-between gap-2 rounded-xl bg-well/65 px-3 py-2 text-left text-[12px] text-foreground ring-1 ring-inset ring-hairline transition-all hover:bg-well hover:ring-hairline-strong"
                           >
-                            {example}
-                          </Button>
+                            <span className="leading-snug">{example}</span>
+                            <ArrowRight
+                              className="size-3.5 shrink-0 text-muted-foreground opacity-60 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100"
+                              aria-hidden="true"
+                            />
+                          </button>
                         ))}
-                      </EmptyContent>
-                    </Empty>
+                      </div>
+                    </div>
                   </MessageScrollerItem>
                 ) : (
                   turns.map((turn) => (
@@ -436,16 +435,10 @@ export function AskPanel({
           event.preventDefault();
           void send(draft);
         }}
-        className="min-w-0 shrink-0 border-t border-border p-2"
+        className="min-w-0 shrink-0 border-t border-hairline bg-chrome/40 p-3"
       >
-        <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
-          <span>about</span>
-          <span className="truncate font-mono text-foreground">
-            {context === null ? "the repository" : context.path}
-          </span>
-        </div>
-        <InputGroup className="min-w-0">
-          <InputGroupTextarea
+        <div className="rounded-xl bg-raised shadow-xs ring-1 ring-inset ring-hairline-strong transition-shadow focus-within:ring-selection/55">
+          <textarea
             rows={2}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
@@ -459,21 +452,36 @@ export function AskPanel({
                 void send(draft);
               }
             }}
-            placeholder="Ask about this repository…"
-            className="max-h-40 min-h-11 text-[11px]"
+            placeholder="Ask about files, routes, or blast radius…"
+            aria-label="Ask about this repository"
+            className="block max-h-40 min-h-[52px] w-full resize-none bg-transparent px-3 pt-2.5 pb-1.5 text-[12.5px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
           />
-          <InputGroupAddon align="block-end">
-            <InputGroupButton
+          <div className="flex items-center justify-between gap-2 px-2.5 pb-2 pt-1">
+            <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="shrink-0">About</span>
+              <span className="truncate rounded-md bg-well/80 px-1.5 py-0.5 font-mono text-[10.5px] text-foreground">
+                {context === null ? "the repository" : context.path}
+              </span>
+            </div>
+            <button
               type="submit"
-              variant="secondary"
-              size="sm"
-              className="ml-auto"
               disabled={busy || draft.trim() === ""}
+              aria-label={busy ? "Asking" : "Send question"}
+              className={cn(
+                "inline-flex size-7 shrink-0 items-center justify-center rounded-lg transition-all",
+                busy || draft.trim() === ""
+                  ? "bg-well text-muted-foreground opacity-55"
+                  : "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+              )}
             >
-              {busy ? "Asking" : "Send"}
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <ArrowUp className="size-3.5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   );
@@ -495,85 +503,68 @@ function TurnView({
   onHover(selection: Selection): void;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <Message align="end">
-        <MessageContent>
-          <MessageHeader>question</MessageHeader>
-          <Bubble variant="muted" align="end">
-            <BubbleContent className="text-[11px] leading-[1.45] whitespace-pre-wrap">
-              {turn.question}
-            </BubbleContent>
-          </Bubble>
-          {turn.context !== null ? (
-            <MessageFooter>
-              <span className="min-w-0 truncate font-mono text-[10px]">
-                {turn.context.kind}: {turn.context.path}
-              </span>
-            </MessageFooter>
-          ) : null}
-        </MessageContent>
-      </Message>
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-col items-end gap-1">
+        <div className="max-w-[88%] rounded-2xl rounded-br-md bg-foreground/[0.075] px-3.5 py-2.5 text-[12.5px] leading-[1.5] whitespace-pre-wrap text-foreground dark:bg-raised">
+          {turn.question}
+        </div>
+        {turn.context !== null ? (
+          <span className="max-w-full truncate font-mono text-[10px] text-muted-foreground">
+            {turn.context.kind}: {turn.context.path}
+          </span>
+        ) : null}
+      </div>
 
-      <Message align="start">
-        <MessageContent>
-          <MessageHeader>answer</MessageHeader>
+      <div className="min-w-0 space-y-2">
+        {turn.tools.length > 0 ? (
+          <LookupTrace tools={turn.tools} />
+        ) : turn.status === "streaming" && turn.answer === "" ? (
+          <div className="inline-flex items-center gap-2 rounded-lg bg-well/65 px-2.5 py-1.5 text-[11.5px] text-muted-foreground">
+            <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+            <span>Looking through the graph…</span>
+          </div>
+        ) : null}
 
-          {turn.tools.length > 0 ? (
-            <LookupTrace tools={turn.tools} />
-          ) : turn.status === "streaming" && turn.answer === "" ? (
-            <Trace>
-              <TraceLine>
-                <TraceIcon>
-                  <CircleDotIcon />
-                </TraceIcon>
-                <TraceTitle>Looking</TraceTitle>
-              </TraceLine>
-            </Trace>
-          ) : null}
+        {turn.answer !== "" ? (
+          <div className="min-w-0 [&>div]:mt-0">
+            <ExplanationBody
+              body={turn.answer}
+              filePaths={filePaths}
+              folderIds={folderIds}
+              onReveal={onReveal}
+              onRevealFolder={onRevealFolder}
+              onHover={onHover}
+            />
+          </div>
+        ) : null}
 
-          {turn.answer !== "" ? (
-            <Bubble variant="ghost" align="start" className="max-w-full">
-              <BubbleContent className="text-[11px]">
-                <ExplanationBody
-                  body={turn.answer}
-                  filePaths={filePaths}
-                  folderIds={folderIds}
-                  onReveal={onReveal}
-                  onRevealFolder={onRevealFolder}
-                  onHover={onHover}
-                />
-              </BubbleContent>
-            </Bubble>
-          ) : null}
+        {turn.error !== null ? (
+          <Alert variant="destructive" className="rounded-xl">
+            <AlertTitle>Agent error</AlertTitle>
+            <AlertDescription className="font-mono text-[11px] wrap-break-word">
+              {turn.error}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-          {turn.error !== null ? (
-            <Alert variant="destructive">
-              <AlertTitle>Agent error</AlertTitle>
-              <AlertDescription className="font-mono text-[10.5px] wrap-break-word">
-                {turn.error}
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {turn.status === "done" &&
-          turn.answer === "" &&
-          turn.error === null ? (
-            <Marker>
-              <MarkerIcon>
-                <InfoIcon />
-              </MarkerIcon>
-              <MarkerContent>
-                {turn.tools.length === 0
-                  ? "The agent wrote no answer."
-                  : `The agent used ${
-                      turn.tools.length
-                    } ${turn.tools.length === 1 ? "lookup" : "lookups"} but wrote no answer.`}{" "}
-                Ask again or rephrase.
-              </MarkerContent>
-            </Marker>
-          ) : null}
-        </MessageContent>
-      </Message>
+        {turn.status === "done" &&
+        turn.answer === "" &&
+        turn.error === null ? (
+          <Marker>
+            <MarkerIcon>
+              <InfoIcon />
+            </MarkerIcon>
+            <MarkerContent>
+              {turn.tools.length === 0
+                ? "The agent wrote no answer."
+                : `The agent used ${
+                    turn.tools.length
+                  } ${turn.tools.length === 1 ? "lookup" : "lookups"} but wrote no answer.`}{" "}
+              Ask again or rephrase.
+            </MarkerContent>
+          </Marker>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -591,30 +582,34 @@ function LookupTrace({ tools }: { tools: ToolCall[] }) {
   const latest = tools.at(-1);
 
   return (
-    <Trace>
-      <TraceCollapsible>
-        <TraceCollapsibleTrigger>
-          <TraceLine status={failed ? "error" : undefined}>
-            <TraceIcon>
-              <StatusIcon
-                status={failed ? "error" : running ? "running" : "success"}
-              />
-            </TraceIcon>
-            <TraceTitle>{title}</TraceTitle>
-            {latest ? (
-              <TraceDescription>{latest.name}</TraceDescription>
-            ) : null}
-          </TraceLine>
-        </TraceCollapsibleTrigger>
-        <TraceCollapsibleContent>
-          <Trace>
-            {tools.map((tool) => (
-              <LookupRow key={tool.id} tool={tool} />
-            ))}
-          </Trace>
-        </TraceCollapsibleContent>
-      </TraceCollapsible>
-    </Trace>
+    <div className="rounded-xl bg-well/55 px-2.5 py-1.5 ring-1 ring-inset ring-hairline">
+      <Trace>
+        <TraceCollapsible>
+          <TraceCollapsibleTrigger>
+            <TraceLine status={failed ? "error" : undefined}>
+              <TraceIcon>
+                <StatusIcon
+                  status={failed ? "error" : running ? "running" : "success"}
+                />
+              </TraceIcon>
+              <TraceTitle>{title}</TraceTitle>
+              {latest ? (
+                <TraceDescription className="font-mono text-[10.5px]">
+                  {latest.name}
+                </TraceDescription>
+              ) : null}
+            </TraceLine>
+          </TraceCollapsibleTrigger>
+          <TraceCollapsibleContent>
+            <Trace className="mt-1">
+              {tools.map((tool) => (
+                <LookupRow key={tool.id} tool={tool} />
+              ))}
+            </Trace>
+          </TraceCollapsibleContent>
+        </TraceCollapsible>
+      </Trace>
+    </div>
   );
 }
 
@@ -666,12 +661,12 @@ function LookupRow({ tool }: { tool: ToolCall }) {
 
 function StatusIcon({ status }: { status: ToolCall["status"] }) {
   if (status === "error") {
-    return <XIcon />;
+    return <XIcon className="text-destructive" />;
   }
   if (status === "running") {
-    return <CircleDotIcon />;
+    return <Loader2 className="animate-spin" />;
   }
-  return <CheckIcon />;
+  return <CheckIcon className="text-incoming" />;
 }
 
 function describeArguments(args: unknown): string {

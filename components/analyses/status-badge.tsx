@@ -1,24 +1,37 @@
 import { Badge } from "@/components/ui/badge";
 import type { Status } from "@/lib/pipeline/stages";
+import { cn } from "@/lib/utils";
 
 export type ShownStatus = Status | "stale";
 
 const LABELS: Record<ShownStatus, string> = {
-  queued: "queued",
-  running: "running",
-  succeeded: "succeeded",
-  failed: "failed",
-  stale: "stale",
+  queued: "Queued",
+  running: "Running",
+  succeeded: "Ready",
+  failed: "Failed",
+  stale: "Stale",
 };
 
-const STYLES: Record<ShownStatus, { dot: string; text: string }> = {
-  queued: { dot: "bg-border", text: "text-muted-foreground" },
-  running: { dot: "bg-foreground", text: "text-foreground" },
-  succeeded: { dot: "bg-foreground/40", text: "text-muted-foreground" },
-  failed: { dot: "bg-destructive", text: "text-destructive" },
+const STYLES: Record<ShownStatus, { dot: string; pill: string }> = {
+  queued: {
+    dot: "bg-muted-foreground/50",
+    pill: "border-hairline-strong bg-well/80 text-muted-foreground",
+  },
+  running: {
+    dot: "bg-selection atlas-live",
+    pill: "border-selection/30 bg-selection/10 text-foreground",
+  },
+  succeeded: {
+    dot: "bg-incoming",
+    pill: "border-incoming/25 bg-incoming/10 text-foreground",
+  },
+  failed: {
+    dot: "bg-destructive",
+    pill: "border-destructive/30 bg-destructive/10 text-destructive",
+  },
   stale: {
     dot: "border border-dashed border-muted-foreground",
-    text: "text-muted-foreground",
+    pill: "border-hairline-strong bg-well/60 text-muted-foreground",
   },
 };
 
@@ -27,9 +40,9 @@ export function StatusBadge({ status }: { status: ShownStatus }) {
   return (
     <Badge
       variant="outline"
-      className={`h-4 gap-1.5 px-1.5 font-mono text-[10.5px] font-normal ${style.text}`}
+      className={cn("h-5 gap-1.5 rounded-full px-2 text-[11px] font-medium", style.pill)}
     >
-      <span aria-hidden className={`size-1.5 rounded-full ${style.dot} ${status === "running" ? "atlas-live" : ""}`} />
+      <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", style.dot)} />
       {LABELS[status]}
     </Badge>
   );

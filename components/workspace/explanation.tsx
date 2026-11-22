@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, Loader2, RotateCw } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { RerunButton } from "@/components/analyses/rerun-button";
@@ -85,15 +86,20 @@ export function ExplanationPanel({
 
   if (!aiConfigured) {
     return (
-      <div className="px-3 py-3 text-[11px]">
-        <p>Explanations are not configured.</p>
-        <p className="mt-1.5 text-muted-foreground">
-          Set <span className="font-mono">AI_BASE_URL</span>,{" "}
-          <span className="font-mono">AI_API_KEY</span> and{" "}
-          <span className="font-mono">AI_MODEL</span> in{" "}
-          <span className="font-mono">.env.local</span>. The map still works
-          without them; files convention could not identify stay unclassified.
-        </p>
+      <div className="px-3.5 py-4 text-[12px]">
+        <div className="rounded-xl bg-well/65 p-3.5 ring-1 ring-inset ring-hairline">
+          <p className="font-medium text-foreground">
+            Explanations are not configured
+          </p>
+          <p className="mt-1.5 leading-relaxed text-muted-foreground">
+            Set <span className="font-mono text-foreground">AI_BASE_URL</span>,{" "}
+            <span className="font-mono text-foreground">AI_API_KEY</span> and{" "}
+            <span className="font-mono text-foreground">AI_MODEL</span> in{" "}
+            <span className="font-mono text-foreground">.env.local</span>. The
+            map still works without them; files convention could not identify
+            stay unclassified.
+          </p>
+        </div>
       </div>
     );
   }
@@ -101,50 +107,66 @@ export function ExplanationPanel({
   const busy = state.status === "loading";
 
   return (
-    <div className="px-3 py-3 text-[11px]">
-      <div className="flex items-center gap-2">
+    <div className="px-3.5 py-3.5 text-[12.5px]">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => onExplain(target)}
           disabled={busy}
           className={cn(
-            "rounded-sm border px-2 py-0.5",
-            "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            "inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium transition-all",
+            state.body
+              ? "bg-well text-foreground ring-1 ring-inset ring-hairline-strong hover:bg-muted/70"
+              : "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
             "disabled:cursor-default disabled:opacity-60",
           )}
         >
-          {busy
-            ? state.body
-              ? "Reloading…"
-              : "Writing…"
-            : state.body
-              ? "Reload"
-              : "Explain"}
+          {busy ? (
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+          ) : state.body ? (
+            <RotateCw className="size-3" aria-hidden="true" />
+          ) : null}
+          <span>
+            {busy
+              ? state.body
+                ? "Reloading…"
+                : "Writing…"
+              : state.body
+                ? "Reload"
+                : "Explain"}
+          </span>
         </button>
         {state.cached ? (
-          <span className="text-[10px] text-muted-foreground">cached</span>
+          <span className="rounded-full bg-well px-2 py-0.5 text-[10.5px] text-muted-foreground ring-1 ring-inset ring-hairline">
+            Cached
+          </span>
         ) : null}
         {!tracingConfigured ? (
-          <span className="text-[10px] text-muted-foreground">
-            tracing off
+          <span className="rounded-full bg-well/60 px-2 py-0.5 text-[10.5px] text-muted-foreground">
+            Tracing off
           </span>
         ) : null}
       </div>
 
       {busy && !state.body ? (
-        <p className="mt-2 text-muted-foreground">
-          Reading the {target.kind} and its neighbours…
+        <p className="mt-3 flex items-center gap-2 text-[12px] text-muted-foreground">
+          <span>Reading the {target.kind} and its neighbours…</span>
         </p>
       ) : null}
 
       {state.error ? (
-        <p role="alert" className="mt-2 text-destructive">
+        <p
+          role="alert"
+          className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-[12px] text-destructive ring-1 ring-inset ring-destructive/20"
+        >
           {state.error}
         </p>
       ) : null}
 
       {state.warning ? (
-        <p className="mt-2 text-muted-foreground">{state.warning}</p>
+        <p className="mt-3 rounded-lg bg-well/70 px-3 py-2 text-[11.5px] text-muted-foreground">
+          {state.warning}
+        </p>
       ) : null}
 
       {state.body ? (
@@ -159,7 +181,7 @@ export function ExplanationPanel({
       ) : null}
 
       {state.staleStatus === "loading" ? (
-        <p className="mt-3 text-[10px] text-muted-foreground">
+        <p className="mt-3 text-[11px] text-muted-foreground">
           Checking for changes…
         </p>
       ) : null}
@@ -171,11 +193,12 @@ export function ExplanationPanel({
       />
 
       {!tracingConfigured ? (
-        <p className="mt-3 text-[10px] text-muted-foreground">
+        <p className="mt-4 border-t border-hairline pt-3 text-[11px] leading-relaxed text-muted-foreground">
           Tracing is off. Set{" "}
-          <span className="font-mono">LANGSMITH_TRACING=true</span> and{" "}
-          <span className="font-mono">LANGSMITH_API_KEY</span> to record
-          runs.
+          <span className="font-mono text-foreground">LANGSMITH_TRACING=true</span>{" "}
+          and{" "}
+          <span className="font-mono text-foreground">LANGSMITH_API_KEY</span>{" "}
+          to record runs.
         </p>
       ) : null}
     </div>
@@ -197,7 +220,7 @@ function StaleNotice({
 
   if (stale.kind === "unknown") {
     return (
-      <p className="mt-3 border border-dashed border-border px-2 py-1.5 text-[10px] text-muted-foreground">
+      <p className="mt-3.5 rounded-lg border border-dashed border-hairline-strong px-3 py-2 text-[11px] text-muted-foreground">
         Couldn&apos;t check for changes: {stale.message}
       </p>
     );
@@ -211,13 +234,23 @@ function StaleNotice({
         : "The repository moved past the analysed commit. The folder may have changed since the map was built.";
 
   return (
-    <div className="mt-3 border border-dashed border-border bg-muted/30 px-2 py-1.5">
-      <p>{message}</p>
-      <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-        {stale.analysedSha.slice(0, 7)} → {stale.headSha.slice(0, 7)}
-      </p>
-      <div className="mt-1.5">
-        <RerunButton analysisId={analysisId} />
+    <div className="mt-3.5 rounded-xl bg-outgoing/[0.08] p-3 ring-1 ring-inset ring-outgoing/25">
+      <div className="flex items-start gap-2">
+        <AlertTriangle
+          className="mt-0.5 size-3.5 shrink-0 text-outgoing"
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] leading-relaxed text-foreground">
+            {message}
+          </p>
+          <p className="mt-1 font-mono text-[10.5px] text-muted-foreground">
+            {stale.analysedSha.slice(0, 7)} → {stale.headSha.slice(0, 7)}
+          </p>
+          <div className="mt-2.5">
+            <RerunButton analysisId={analysisId} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -262,18 +295,18 @@ export function ExplanationBody({
   const blocks = parseBlocks(body);
 
   return (
-    <div className="mt-2 min-w-0 space-y-2 break-words [overflow-wrap:anywhere]">
+    <div className="mt-3 min-w-0 space-y-2.5 text-[12.5px] text-foreground break-words [overflow-wrap:anywhere]">
       {blocks.map((block, index) =>
         block.kind === "paragraph" ? (
-          <p key={index} className="min-w-0 leading-[1.45] break-words">
+          <p key={index} className="min-w-0 leading-[1.55] break-words">
             {inline(block.text, linker, `p-${index}`)}
           </p>
         ) : (
-          <ul key={index} className="min-w-0 list-disc space-y-1 pl-4">
+          <ul key={index} className="min-w-0 list-disc space-y-1.5 pl-4">
             {block.items.map((item, itemIndex) => (
               <li
                 key={itemIndex}
-                className="min-w-0 leading-[1.45] break-words"
+                className="min-w-0 leading-[1.55] break-words"
               >
                 {inline(item, linker, `b-${index}-${itemIndex}`)}
               </li>
@@ -506,7 +539,7 @@ function codeNode(
   return (
     <code
       key={key}
-      className="rounded-xs bg-muted px-1 py-px font-mono text-[10.5px] break-words [overflow-wrap:anywhere]"
+      className="rounded-sm bg-well px-1 py-px font-mono text-[11.5px] text-foreground break-words [overflow-wrap:anywhere]"
     >
       {stripMarkers(value)}
     </code>
@@ -544,7 +577,7 @@ function PathButton({
       }}
       onMouseEnter={() => linker.onHover(hover)}
       onMouseLeave={() => linker.onHover(null)}
-      className="-mx-0.5 max-w-full rounded-xs px-0.5 text-left font-mono break-words text-selection underline decoration-border underline-offset-2 [overflow-wrap:anywhere] hover:bg-selection/10 hover:decoration-selection"
+      className="inline max-w-full rounded-sm bg-selection/10 px-1 py-px text-left font-mono text-[11.5px] break-words text-selection transition-colors [overflow-wrap:anywhere] hover:bg-selection/18"
     >
       {stripMarkers(label)}
     </button>

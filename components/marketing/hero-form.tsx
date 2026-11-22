@@ -38,21 +38,21 @@ export function HeroForm({
   return (
     <form
       action={action}
-      className={cn("w-full max-w-[31rem]", compact ? "mt-0" : "mt-8")}
+      className={cn("w-full max-w-[34rem]", compact ? "mt-0" : "mt-7")}
     >
       <label htmlFor={id} className="sr-only">
         Public GitHub repository URL
       </label>
       <div
         className={cn(
-          "group flex items-center gap-1 rounded-md border border-input bg-card p-1 transition-[border-color,box-shadow] duration-150",
-          "focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/40",
-          "has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-1 has-[[aria-invalid=true]]:ring-destructive/20",
+          "group flex items-center gap-1.5 rounded-xl border border-hairline-strong bg-raised p-1.5 shadow-sm transition-[border-color,box-shadow] duration-150",
+          "focus-within:border-foreground/30 focus-within:ring-2 focus-within:ring-ring/15",
+          "has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-2 has-[[aria-invalid=true]]:ring-destructive/20",
         )}
       >
         <span
           aria-hidden="true"
-          className="hidden pl-2 text-muted-foreground sm:block"
+          className="hidden pl-2.5 text-muted-foreground sm:block"
         >
           <GitBranch className="size-3.5" />
         </span>
@@ -65,16 +65,16 @@ export function HeroForm({
           aria-invalid={state.error ? true : undefined}
           placeholder="github.com/owner/repo"
           className={cn(
-            "min-w-0 flex-1 border-0 bg-transparent px-2 font-mono text-[13px] shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 dark:bg-transparent",
-            compact ? "h-8 text-[12px]" : "h-9",
+            "min-w-0 flex-1 border-0 bg-transparent px-2 font-mono text-[13px] shadow-none placeholder:text-muted-foreground/65 focus-visible:bg-transparent focus-visible:ring-0",
+            compact ? "h-8 text-[12.5px]" : "h-9",
           )}
         />
         <Button
           type="submit"
           size="lg"
           className={cn(
-            "group/submit shrink-0 gap-1.5 px-3",
-            compact ? "h-8 text-[11.5px]" : "h-9",
+            "group/submit shrink-0 gap-1.5 rounded-lg px-3.5",
+            compact ? "h-8 text-[12px]" : "h-9 text-[12.5px]",
           )}
           disabled={pending}
         >
@@ -94,7 +94,7 @@ export function HeroForm({
       {state.error ? (
         <p
           role="alert"
-          className="mt-2 font-mono text-[11px] text-destructive"
+          className="mt-2 font-mono text-[11.5px] text-destructive"
         >
           {state.error}
         </p>

@@ -91,8 +91,10 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
   return (
     <div
       className={cn(
-        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-md border bg-card transition-opacity duration-150",
-        data.selected ? "border-selection" : "border-border",
+        "nopan flex h-full w-full select-none flex-col overflow-hidden rounded-lg border bg-surface shadow-sm transition-opacity duration-150",
+        data.selected
+          ? "border-selection ring-1 ring-selection/20"
+          : "border-hairline-strong",
         data.dimmed && !panelHovered && "opacity-25",
       )}
     >
@@ -107,20 +109,20 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
         title={`${data.directory} — click to fold`}
         style={HEADER_STYLE}
         className={cn(
-          "flex shrink-0 cursor-pointer flex-col justify-center gap-[2px] border-b border-border text-left transition-colors duration-150",
+          "flex shrink-0 cursor-pointer flex-col justify-center gap-[2px] border-b border-hairline text-left transition-colors duration-150",
           data.selected
-            ? "bg-selection/[0.06] hover:bg-selection/10"
-            : "bg-muted/30 hover:bg-muted/50",
+            ? "bg-selection/[0.08] hover:bg-selection/[0.12]"
+            : "bg-chrome/80 hover:bg-chrome",
           headerHovered &&
             "shadow-[inset_0_0_0_1px_var(--selection)]",
           "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-selection",
         )}
       >
         <span className="flex w-full items-center gap-2">
-          <span className="min-w-0 truncate text-[12px] font-semibold leading-4 text-foreground">
+          <span className="min-w-0 truncate font-mono text-[12px] font-semibold leading-4 text-foreground">
             {data.label}
           </span>
-          <span className="ml-auto shrink-0 text-[10.5px] leading-3 text-muted-foreground tabular-nums">
+          <span className="ml-auto shrink-0 font-mono text-[10.5px] leading-3 text-muted-foreground tabular-nums">
             {data.matched !== null
               ? `${data.matched}/${data.fileCount}`
               : data.fileCount}{" "}
@@ -128,12 +130,12 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
           </span>
           <span
             aria-hidden
-            className="shrink-0 text-[12px] leading-3 text-muted-foreground"
+            className="flex size-4 shrink-0 items-center justify-center rounded-sm text-[12px] leading-none text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
           >
             ×
           </span>
         </span>
-        <span className="flex w-full items-center gap-2 text-[10.5px] leading-3 tabular-nums">
+        <span className="flex w-full items-center gap-2 font-mono text-[10.5px] leading-3 tabular-nums">
           <span
             className="text-incoming"
             title="Distinct files that import this"
@@ -200,8 +202,8 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
               className={cn(
                 "flex size-full cursor-pointer items-center gap-[6px] text-left text-[11.5px] transition-colors duration-150",
                 row.selected
-                  ? "bg-selection/10 text-foreground shadow-[inset_2px_0_0_var(--selection)]"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  ? "bg-selection/12 text-foreground shadow-[inset_2px_0_0_var(--selection)]"
+                  : "text-muted-foreground hover:bg-well/70 hover:text-foreground",
                 isHovered(row.path) &&
                   "shadow-[inset_0_0_0_1px_var(--selection)]",
                 row.dimmed && !isHovered(row.path) && "opacity-25",
@@ -210,7 +212,7 @@ export function ModulePanel({ id, data }: NodeProps<PanelFlowNode>) {
             >
               <span
                 aria-hidden
-                className="size-[8px] shrink-0 rounded-xs"
+                className="size-[8px] shrink-0 rounded-[2px]"
                 style={{
                   backgroundColor:
                     row.tone === null

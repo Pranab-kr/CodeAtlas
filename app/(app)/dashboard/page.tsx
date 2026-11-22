@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
 
 import { AnalysisRow } from "@/components/analyses/analysis-row";
@@ -8,8 +9,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -28,42 +27,44 @@ import { formatUpdatedAt, now } from "@/lib/time";
 
 function AnalysesLoading() {
   return (
-    <Card className="mt-4 gap-0 py-0">
-      <CardContent className="px-3 py-3 font-mono text-[11px] text-muted-foreground">
-        Reading analyses…
-      </CardContent>
-    </Card>
+    <div className="atlas-surface mt-6 flex items-center gap-2.5 rounded-2xl px-5 py-6 text-[12.5px] text-muted-foreground">
+      <Loader2 className="size-3.5 animate-spin" />
+      <span>Reading workspace analyses…</span>
+    </div>
   );
 }
 
 function AnalysesEmpty() {
   return (
-    <Card className="mt-4 gap-0 py-0">
-      <CardHeader className="bg-muted/60 px-3 py-1.5">
-        <CardTitle className="font-mono text-[10.5px] font-normal text-muted-foreground">
-          analyses
-        </CardTitle>
-      </CardHeader>
-      <Separator />
-      <CardContent className="flex flex-col items-start gap-3 px-3 py-10">
-        <AtlasMark className="size-6 text-muted-foreground" />
+    <div className="atlas-window mt-6 overflow-hidden rounded-2xl">
+      <div className="border-b border-hairline bg-chrome/70 px-4 py-2.5">
+        <span className="text-[11.5px] font-medium text-muted-foreground">
+          Repositories
+        </span>
+      </div>
+      <div className="flex flex-col items-start gap-3.5 px-6 py-12">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-well shadow-2xs">
+          <AtlasMark className="size-5 text-muted-foreground" />
+        </span>
         <div>
-          <p className="text-[12px]">No analyses in this workspace yet.</p>
-          <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
-            Paste a public repository above to map it. Everyone in this
-            workspace will see the result.
+          <p className="text-[14px] font-medium">
+            No repositories mapped in this workspace yet
+          </p>
+          <p className="mt-1 max-w-md text-[12.5px] leading-relaxed text-muted-foreground">
+            Paste a public GitHub repository URL above to parse its dependency
+            map. Everyone in this workspace will see the result.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 function AnalysesError({ message }: { message: string }) {
   return (
-    <Alert variant="destructive" className="mt-4">
+    <Alert variant="destructive" className="mt-6 rounded-xl">
       <AlertTitle>Could not read analyses.</AlertTitle>
-      <AlertDescription className="font-mono text-[10.5px] wrap-break-word">
+      <AlertDescription className="font-mono text-[11px] wrap-break-word">
         {message}
       </AlertDescription>
     </Alert>
@@ -109,21 +110,29 @@ async function AnalysesList() {
   const currentTime = now();
 
   return (
-    <Card className="mt-4 gap-0 py-0">
+    <div className="atlas-window mt-6 overflow-hidden rounded-2xl">
+      <div className="flex items-center justify-between border-b border-hairline bg-chrome/70 px-4 py-2.5">
+        <span className="text-[12px] font-medium text-foreground">
+          Mapped repositories
+        </span>
+        <span className="rounded-full bg-well px-2 py-0.5 font-mono text-[11px] text-muted-foreground tabular-nums">
+          {analyses.length}
+        </span>
+      </div>
       <Table className="table-fixed">
         <TableHeader>
-          <TableRow className="bg-muted/60 hover:bg-muted/60">
-            <TableHead className="h-7 px-3 text-[10.5px] font-medium text-muted-foreground">
-              repository
+          <TableRow className="bg-surface hover:bg-surface">
+            <TableHead className="h-9 px-4 text-[11px] font-medium text-muted-foreground">
+              Repository
             </TableHead>
-            <TableHead className="h-7 w-24 px-3 text-[10.5px] font-medium text-muted-foreground">
-              state
+            <TableHead className="h-9 w-28 px-4 text-[11px] font-medium text-muted-foreground">
+              Status
             </TableHead>
-            <TableHead className="hidden h-7 w-36 px-3 text-[10.5px] font-medium text-muted-foreground sm:table-cell">
-              updated
+            <TableHead className="hidden h-9 w-36 px-4 text-[11px] font-medium text-muted-foreground sm:table-cell">
+              Updated
             </TableHead>
-            <TableHead className="h-7 w-10 px-2">
-              <span className="sr-only">actions</span>
+            <TableHead className="h-9 w-12 px-3">
+              <span className="sr-only">Actions</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -154,7 +163,7 @@ async function AnalysesList() {
           })}
         </TableBody>
       </Table>
-    </Card>
+    </div>
   );
 }
 
@@ -179,15 +188,20 @@ function progressOf(row: {
 
 export default function DashboardPage() {
   return (
-    <section className="h-full overflow-auto">
-      <div className="mx-auto w-full max-w-5xl px-4 py-5">
-        <header>
-          <h1 className="text-[13px] font-medium">Analyses</h1>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Repositories mapped by this workspace.
-          </p>
-        </header>
-        <SubmitForm />
+    <section className="atlas-scroll h-full overflow-auto bg-well/40">
+      <div className="mx-auto w-full max-w-5xl px-6 py-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="atlas-kicker">Workspace</p>
+            <h1 className="mt-1.5 text-[22px] font-medium tracking-[-0.03em]">
+              Analyses
+            </h1>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Repositories parsed and shared across this workspace.
+            </p>
+          </div>
+          <SubmitForm />
+        </div>
         <Suspense fallback={<AnalysesLoading />}>
           <AnalysesList />
         </Suspense>

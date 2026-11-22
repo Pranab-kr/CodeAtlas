@@ -26,23 +26,27 @@ export function CategoryRail({
   );
 
   return (
-    <div className="py-2">
-      <div className="flex items-baseline justify-between gap-2 px-3 pb-1">
-        <h2 className="text-[11px] text-muted-foreground">
-          Categories{" "}
-          <span className="tabular-nums">· {total} files</span>
-        </h2>
+    <div className="py-3">
+      <div className="flex items-center justify-between gap-2 px-3.5 pb-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h2 className="text-[11.5px] font-medium text-foreground">
+            Roles
+          </h2>
+          <span className="rounded-full bg-well px-1.5 py-px font-mono text-[10px] text-muted-foreground tabular-nums">
+            {total}
+          </span>
+        </div>
         {active ? (
           <button
             type="button"
             onClick={() => onToggle(active)}
-            className="text-[10px] text-muted-foreground transition-colors hover:text-foreground hover:underline"
+            className="rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           >
             Clear
           </button>
         ) : null}
       </div>
-      <ul>
+      <ul className="space-y-0.5 px-2">
         {categories.map((category, index) => {
           const on = active === category.key;
           return (
@@ -54,21 +58,21 @@ export function CategoryRail({
                 onClick={() => onToggle(category.key)}
                 className={
                   on
-                    ? "flex h-6 w-full items-center gap-2 bg-selection/15 px-3 text-left shadow-[inset_2px_0_0_var(--selection)] transition-colors"
-                    : "flex h-6 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-60 disabled:hover:bg-transparent"
+                    ? "flex h-7 w-full items-center gap-2 rounded-lg bg-selection/14 px-2.5 text-left text-foreground ring-1 ring-inset ring-selection/30 transition-colors"
+                    : "flex h-7 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-surface/80 hover:text-foreground disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                 }
               >
                 <span
                   aria-hidden
-                  className="size-[8px] shrink-0 rounded-xs"
+                  className="size-2 shrink-0 rounded-[3px]"
                   style={{
                     backgroundColor: `var(--kind-${categoryTone(index) + 1})`,
                   }}
                 />
-                <span className="min-w-0 flex-1 truncate text-[11px]">
+                <span className="min-w-0 flex-1 truncate text-[12px]">
                   {railLabel(category.key)}
                 </span>
-                <span className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
+                <span className="shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums">
                   {category.count}
                 </span>
               </button>
