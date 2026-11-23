@@ -585,6 +585,93 @@
   fill: currentColor !important;
 }
 
+/* ── Clerk cards & popovers ─────────────────────────────────────────────────
+   Match CodeAtlas warm paper / warm charcoal surfaces and hide the Clerk
+   branding / development-mode strips across auth cards, popovers, and modals. */
+
+.atlas-clerk-cardbox {
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-window) !important;
+  border-radius: calc(var(--radius) + 4px) !important;
+  overflow: hidden !important;
+}
+
+.atlas-clerk-card {
+  background: var(--surface) !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.atlas-clerk-title {
+  letter-spacing: -0.02em !important;
+  font-weight: 600 !important;
+}
+
+.atlas-clerk-subtitle {
+  color: var(--muted-foreground) !important;
+}
+
+.atlas-clerk-social-btn {
+  background: var(--raised) !important;
+  border: 1px solid var(--hairline-strong) !important;
+  box-shadow: var(--shadow-2xs) !important;
+  transition: background-color 140ms ease, border-color 140ms ease !important;
+}
+
+.atlas-clerk-social-btn:hover {
+  background: var(--accent) !important;
+}
+
+.atlas-clerk-input {
+  background: var(--background) !important;
+  border: 1px solid var(--hairline-strong) !important;
+  box-shadow: none !important;
+}
+
+.atlas-clerk-input:focus {
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 20%, transparent) !important;
+}
+
+.atlas-clerk-primary-btn {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  box-shadow: var(--shadow-2xs) !important;
+  border: 0 !important;
+}
+
+.atlas-clerk-primary-btn:hover {
+  opacity: 0.92;
+}
+
+.atlas-clerk-footer {
+  background: var(--chrome) !important;
+  border-top: 1px solid var(--hairline) !important;
+  padding-top: 0 !important;
+}
+
+.atlas-clerk-footer-action {
+  padding-block: 14px !important;
+}
+
+.atlas-clerk-popover {
+  background: var(--popover) !important;
+  box-shadow: var(--shadow-float) !important;
+  border-radius: calc(var(--radius) + 2px) !important;
+  overflow: hidden !important;
+}
+
+/* Hide Clerk branding & "Development mode" strips everywhere */
+.cl-footerItem:has(a[href*="clerk.com"]),
+.cl-footer > div:not(.cl-footerAction):has(a[href*="clerk.com"]),
+.cl-userButtonPopoverFooter,
+.cl-organizationSwitcherPopoverFooter,
+.cl-navbar > div:has(a[href*="clerk.com"]),
+.cl-modalContent .cl-footer:has(a[href*="clerk.com"]) {
+  display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -613,4 +700,5 @@
     transform: none;
   }
 }
+
 

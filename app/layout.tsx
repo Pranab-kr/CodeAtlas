@@ -46,17 +46,40 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             signUpFallbackRedirectUrl="/dashboard"
             afterSignOutUrl="/sign-in"
             appearance={{
+              options: {
+                unsafe_disableDevelopmentModeWarnings: true,
+                socialButtonsPlacement: "top",
+                socialButtonsVariant: "blockButton",
+              },
               variables: {
+                fontFamily: "var(--font-inter), system-ui, sans-serif",
+                fontFamilyButtons: "var(--font-inter), system-ui, sans-serif",
                 colorPrimary: "var(--primary)",
                 colorPrimaryForeground: "var(--primary-foreground)",
                 colorForeground: "var(--foreground)",
                 colorMuted: "var(--muted)",
                 colorMutedForeground: "var(--muted-foreground)",
-                colorBackground: "var(--card)",
+                colorBackground: "var(--surface)",
                 colorInput: "var(--background)",
                 colorInputForeground: "var(--foreground)",
                 colorBorder: "var(--border)",
+                colorNeutral: "var(--foreground)",
                 borderRadius: "var(--radius)",
+              },
+              elements: {
+                cardBox: "atlas-clerk-cardbox",
+                card: "atlas-clerk-card",
+                headerTitle: "atlas-clerk-title",
+                headerSubtitle: "atlas-clerk-subtitle",
+                socialButtonsBlockButton: "atlas-clerk-social-btn",
+                formFieldInput: "atlas-clerk-input",
+                formButtonPrimary: "atlas-clerk-primary-btn",
+                footer: "atlas-clerk-footer",
+                footerAction: "atlas-clerk-footer-action",
+                userButtonPopoverCard: "atlas-clerk-popover",
+                organizationSwitcherPopoverCard: "atlas-clerk-popover",
+                userButtonPopoverFooter: "hidden",
+                organizationSwitcherPopoverFooter: "hidden",
               },
             }}
           >
