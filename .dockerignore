@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Dependencies & build outputs
+node_modules
+.next
+out
+build
+coverage
+.vercel
+*.tsbuildinfo
+
+# Local environment & secrets (injected via Railway Variables)
+.env*
+!.env.example
+
+# Agent / IDE / editor files
+.agents
+.claude
+.cursor
+.commandcode
+.vscode
+.idea
+opencode.json
+AGENTS.md
+CLAUDE.md
+skills-lock.json
+
+# Non-runtime directories & docs
+docs
+evals
+scripts
+supabase
+README.md
+
+# OS / debug logs
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
