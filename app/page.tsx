@@ -134,8 +134,7 @@ export default function LandingPage() {
 
               <p className="atlas-reveal mt-4 max-w-[50ch] text-[15px] leading-[1.68] text-muted-foreground [animation-delay:300ms]">
                 Paste a public repository. CodeAtlas parses its imports and
-                draws what depends on what. The model explains what the parser
-                found; it never decides what&rsquo;s there.
+                draws what depends on what.
               </p>
 
               <div className="atlas-reveal flex w-full justify-center [animation-delay:380ms]">
