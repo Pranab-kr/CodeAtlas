@@ -121,10 +121,10 @@ export default function LandingPage() {
         <section className="relative overflow-hidden">
           <AnimatedGrid />
 
-          <div className="relative mx-auto w-full max-w-[1160px] px-6 pt-12 pb-20 md:pt-16 md:pb-24">
+          <div className="relative mx-auto w-full max-w-[1160px] px-6 pt-10 pb-20 md:pt-14 md:pb-24">
             <div className="mx-auto flex max-w-[46rem] flex-col items-center text-center">
-              <div className="atlas-reveal mb-5 inline-flex items-center gap-2 rounded-full bg-surface/90 px-3 py-1 text-[11.5px] text-muted-foreground shadow-2xs [animation-delay:20ms]">
-                <span className="size-1.5 rounded-full bg-incoming" />
+              <div className="atlas-reveal mb-5 inline-flex items-center gap-2 rounded-full bg-surface/90 px-3 py-1 text-[11.5px] text-muted-foreground shadow-2xs ring-1 ring-hairline [animation-delay:20ms]">
+                <span className="size-1.5 rounded-full bg-incoming shadow-[0_0_8px_var(--incoming)]" />
                 <span>Static AST dependency maps for TypeScript &amp; JavaScript</span>
               </div>
 
@@ -132,7 +132,7 @@ export default function LandingPage() {
                 <HeroHeadline />
               </div>
 
-              <p className="atlas-reveal mt-5 max-w-[50ch] text-[15px] leading-[1.68] text-muted-foreground [animation-delay:300ms]">
+              <p className="atlas-reveal mt-4 max-w-[50ch] text-[15px] leading-[1.68] text-muted-foreground [animation-delay:300ms]">
                 Paste a public repository. CodeAtlas parses its imports and
                 draws what depends on what. The model explains what the parser
                 found; it never decides what&rsquo;s there.
@@ -142,12 +142,12 @@ export default function LandingPage() {
                 <HeroForm />
               </div>
 
-              <p className="atlas-reveal mt-3 text-[11.5px] leading-relaxed text-muted-foreground [animation-delay:440ms]">
+              <p className="atlas-reveal mt-2.5 text-[11.5px] leading-relaxed text-muted-foreground/85 [animation-delay:440ms]">
                 Public GitHub repositories. Sign in, then analysis starts immediately.
               </p>
             </div>
 
-            <div className="atlas-reveal mt-12 md:mt-14 [animation-delay:240ms]">
+            <div className="atlas-reveal mt-10 md:mt-12 [animation-delay:240ms]">
               <HeroStage />
             </div>
           </div>
@@ -188,12 +188,12 @@ export default function LandingPage() {
 
               <dl className="mt-8 grid max-w-[46ch] gap-2.5">
                 <LegendCard
-                  swatchClass="bg-outgoing"
+                  swatchClass="bg-outgoing shadow-[0_0_8px_var(--outgoing)]"
                   term="Outgoing"
                   detail="Files this module imports directly"
                 />
                 <LegendCard
-                  swatchClass="bg-incoming"
+                  swatchClass="bg-incoming shadow-[0_0_8px_var(--incoming)]"
                   term="Incoming"
                   detail="Files that depend on this module"
                 />

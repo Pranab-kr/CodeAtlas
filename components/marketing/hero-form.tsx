@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, GitBranch, Loader2 } from "lucide-react";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import {
   startFromLanding,
@@ -12,6 +12,12 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const INITIAL: LandingState = { error: null, next: null };
+
+const SAMPLE_REPOS = [
+  "honojs/hono",
+  "colinhacks/zod",
+  "shadcn-ui/ui",
+] as const;
 
 /**
  * The field is the product, not a link to it: the URL is validated by the same
@@ -28,12 +34,19 @@ export function HeroForm({
   compact?: boolean;
 }) {
   const [state, action, pending] = useActionState(startFromLanding, INITIAL);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.next) {
       window.location.assign(state.next);
     }
   }, [state.next]);
+
+  const fillSample = (repo: string) => {
+    if (!inputRef.current) return;
+    inputRef.current.value = `https://github.com/${repo}`;
+    inputRef.current.focus();
+  };
 
   return (
     <form
@@ -57,6 +70,7 @@ export function HeroForm({
           <GitBranch className="size-3.5" />
         </span>
         <Input
+          ref={inputRef}
           id={id}
           name="url"
           required
@@ -91,6 +105,21 @@ export function HeroForm({
           )}
         </Button>
       </div>
+      {!compact ? (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+          <span>Try:</span>
+          {SAMPLE_REPOS.map((repo) => (
+            <button
+              key={repo}
+              type="button"
+              onClick={() => fillSample(repo)}
+              className="rounded-md bg-surface/80 px-2 py-0.5 font-mono text-[10.5px] text-foreground/80 shadow-2xs ring-1 ring-hairline transition-colors hover:bg-raised hover:text-foreground"
+            >
+              {repo}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {state.error ? (
         <p
           role="alert"
@@ -102,3 +131,4 @@ export function HeroForm({
     </form>
   );
 }
+

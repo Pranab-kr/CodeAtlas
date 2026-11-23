@@ -672,6 +672,167 @@
   display: none !important;
 }
 
+/* ── Landing hero & graph traveling light-beam edges ────────────────────────
+   Luminous directional pulses travel along active incoming (green) and
+   outgoing (amber) bezier edges using SVG pathLength="100" so every beam
+   stays locked to the exact curve and stops cleanly under reduced motion. */
+
+.atlas-stage-backdrop {
+  position: relative;
+}
+
+.atlas-stage-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -18px 6% auto 6%;
+  height: 68%;
+  pointer-events: none;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      42% 60% at 28% 48%,
+      color-mix(in oklab, var(--incoming) 10%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      42% 60% at 72% 52%,
+      color-mix(in oklab, var(--outgoing) 10%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      46% 55% at 50% 42%,
+      color-mix(in oklab, var(--selection) 9%, transparent),
+      transparent 74%
+    );
+  filter: blur(36px);
+  opacity: 0.7;
+}
+
+.dark .atlas-stage-backdrop::before {
+  background:
+    radial-gradient(
+      42% 60% at 28% 48%,
+      color-mix(in oklab, var(--incoming) 16%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      42% 60% at 72% 52%,
+      color-mix(in oklab, var(--outgoing) 16%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      46% 55% at 50% 42%,
+      color-mix(in oklab, var(--selection) 14%, transparent),
+      transparent 74%
+    );
+  opacity: 0.9;
+}
+
+.atlas-edge-halo {
+  opacity: 0.24;
+  transition: opacity 220ms ease;
+}
+
+.dark .atlas-edge-halo {
+  opacity: 0.42;
+}
+
+.atlas-edge-beam-glow,
+.atlas-edge-beam-core,
+.atlas-edge-beam-tip {
+  will-change: stroke-dashoffset, opacity;
+}
+
+.atlas-edge-beam-glow {
+  stroke-dasharray: 28 140;
+  stroke-dashoffset: 28;
+  animation: atlas-edge-beam-travel var(--beam-dur, 2.35s)
+    cubic-bezier(0.37, 0, 0.23, 1) var(--beam-delay, 0s) infinite;
+}
+
+.atlas-edge-beam-core {
+  stroke-dasharray: 16 152;
+  stroke-dashoffset: 16;
+  animation: atlas-edge-beam-travel-core var(--beam-dur, 2.35s)
+    cubic-bezier(0.37, 0, 0.23, 1) var(--beam-delay, 0s) infinite;
+}
+
+.atlas-edge-beam-tip {
+  stroke-dasharray: 4 164;
+  stroke-dashoffset: 4;
+  animation: atlas-edge-beam-travel-tip var(--beam-dur, 2.35s)
+    cubic-bezier(0.37, 0, 0.23, 1) var(--beam-delay, 0s) infinite;
+}
+
+@keyframes atlas-edge-beam-travel {
+  0% {
+    stroke-dashoffset: 28;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: -102;
+    opacity: 0;
+  }
+}
+
+@keyframes atlas-edge-beam-travel-core {
+  0% {
+    stroke-dashoffset: 16;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 0.95;
+  }
+  100% {
+    stroke-dashoffset: -114;
+    opacity: 0;
+  }
+}
+
+@keyframes atlas-edge-beam-travel-tip {
+  0% {
+    stroke-dashoffset: 4;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -126;
+    opacity: 0;
+  }
+}
+
+.atlas-port-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlas-port-breathe 2.35s ease-in-out var(--beam-delay, 0s) infinite;
+}
+
+@keyframes atlas-port-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.35);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -684,8 +845,18 @@
   .atlas-blur-in,
   .atlas-blur-out,
   .atlas-reveal,
-  .atlas-live {
+  .atlas-live,
+  .atlas-edge-beam-glow,
+  .atlas-edge-beam-core,
+  .atlas-edge-beam-tip,
+  .atlas-port-pulse {
     animation: none !important;
+  }
+
+  .atlas-edge-beam-glow,
+  .atlas-edge-beam-core,
+  .atlas-edge-beam-tip {
+    opacity: 0 !important;
   }
 
   .atlas-highlight {
@@ -700,5 +871,6 @@
     transform: none;
   }
 }
+
 
 
