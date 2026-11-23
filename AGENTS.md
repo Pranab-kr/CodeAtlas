@@ -11,8 +11,9 @@ rules themselves.
 
 Next.js 16 App Router, React 19, TypeScript strict. ts-morph for parsing. React
 Flow and dagre for the map. Clerk for sign-in and organizations. Supabase for
-Postgres, row-level security and realtime. The OpenAI SDK through one wrapped
-client, traced with LangSmith. Tailwind v4. pnpm.
+Postgres, row-level security and realtime. Vercel AI SDK (`ai` +
+`@ai-sdk/openai`) through one unified client, traced with LangSmith. Tailwind
+v4. pnpm.
 
 Next.js 16 changed a lot. If you're not certain about an API, read the docs
 inside the installed package rather than going from memory.

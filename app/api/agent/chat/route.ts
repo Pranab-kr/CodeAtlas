@@ -2,22 +2,24 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 import {
-  agentServerConfig,
-  AgentServerError,
-  createAgentThread,
-  readAgentThread,
-  startAgentRun,
-  type AgentServerConfig,
-} from "@/lib/agent/server";
-import { parseSse } from "@/lib/agent/sse";
-import { AgentStreamTranslator, type AskEvent } from "@/lib/agent/stream";
+  AgentCredentialError,
+  AgentReadError,
+  readAgentSource,
+  type AgentSource,
+} from "@/lib/agent/read";
+import { runAgent, type AgentHistoryMessage } from "@/lib/agent/run";
+import type { AskEvent } from "@/lib/agent/stream";
+import { env } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MAX_BODY = 32_768;
+const MAX_BODY = 96_000;
 const MAX_MESSAGE = 4_000;
 const MAX_SELECTION = 1_000;
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_HISTORY_MESSAGE_CHARS = 4_000;
+const MAX_HISTORY_TOTAL_CHARS = 40_000;
 
 type SelectionHint =
   | { kind: "file"; path: string }
@@ -26,16 +28,15 @@ type SelectionHint =
 interface ChatRequest {
   analysisId: string;
   message: string;
-  threadId: string | null;
+  history: AgentHistoryMessage[];
   selection: SelectionHint | null;
 }
 
-type Supabase = Awaited<ReturnType<typeof createServerSupabaseClient>>;
-
 /**
  * The Ask entry point. It proves the asker can see the analysis, mints the
- * credential that names it, opens or continues a conversation, and relays the
- * runtime's stream back as the small set of events the panel draws.
+ * database-signed credential that names it, loads the read-only analysis once
+ * through that credential, and streams tool lookups and the final answer back
+ * as SSE events.
  */
 export async function POST(request: Request): Promise<Response> {
   if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) {
@@ -66,13 +67,12 @@ export async function POST(request: Request): Promise<Response> {
     return fail(403, "No active organization for this session.");
   }
 
-  const config = agentServerConfig();
-  if (config === null) {
+  if (!env.aiConfigured) {
     return fail(
       503,
       process.env.NODE_ENV === "production"
         ? "Ask is not enabled on this deployment."
-        : "The agent isn't configured. Set AGENT_URL and AGENT_ASSISTANT_ID.",
+        : "AI is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env.local.",
     );
   }
 
@@ -104,17 +104,22 @@ export async function POST(request: Request): Promise<Response> {
     return fail(500, "Could not open a conversation for this analysis.");
   }
 
-  let hint: string | null = null;
+  let source: AgentSource;
   try {
-    hint = await selectionHint(supabase, parsed.analysisId, parsed.selection);
-  } catch (error) {
-    // A selected item that can't be checked is not a reason to lose the
-    // question. The agent simply starts without it.
-    console.error(
-      "Checking the selected item failed:",
-      error instanceof Error ? error.message : String(error),
-    );
+    source = await readAgentSource(credential);
+  } catch (readError) {
+    if (readError instanceof AgentCredentialError) {
+      return fail(401, readError.message);
+    }
+    if (readError instanceof AgentReadError) {
+      console.error("Reading the analysis source for Ask failed:", readError.message);
+      return fail(502, "Could not load this analysis for Ask.");
+    }
+    console.error("Reading the analysis source for Ask failed:", readError);
+    return fail(502, "Could not load this analysis for Ask.");
   }
+
+  const hint = selectionHint(source, parsed.selection);
   const message =
     hint === null ? parsed.message : `${parsed.message}\n\n${hint}`;
 
@@ -126,89 +131,43 @@ export async function POST(request: Request): Promise<Response> {
     request.signal.addEventListener("abort", forwardAbort, { once: true });
   }
 
-  let threadId: string;
-  try {
-    threadId = await resolveThread(
-      config,
-      parsed.threadId,
-      parsed.analysisId,
-      orgId,
-      stop.signal,
-    );
-  } catch (error) {
-    request.signal.removeEventListener("abort", forwardAbort);
-    if (error instanceof AgentServerError) {
-      return fail(error.status, error.message);
-    }
-    console.error("Opening the agent conversation failed:", error);
-    return fail(502, "The agent could not open a conversation.");
-  }
-
-  let upstream: Response;
-  try {
-    upstream = await startAgentRun(
-      config,
-      threadId,
-      message,
-      credential,
-      stop.signal,
-    );
-  } catch (error) {
-    request.signal.removeEventListener("abort", forwardAbort);
-    if (error instanceof AgentServerError) {
-      return fail(error.status, error.message);
-    }
-    console.error("Starting the agent run failed:", error);
-    return fail(502, "The agent could not start this question.");
-  }
-
-  const bodyStream = upstream.body;
-  if (bodyStream === null) {
-    request.signal.removeEventListener("abort", forwardAbort);
-    return fail(502, "The agent returned no stream.");
-  }
-
   const encoder = new TextEncoder();
-  const translator = new AgentStreamTranslator();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: AskEvent) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
-        );
+        if (stop.signal.aborted) {
+          return;
+        }
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
+          );
+        } catch {
+          // The browser already closed the stream.
+        }
       };
 
-      send({ type: "thread", threadId });
-      let finished = false;
-
       try {
-        for await (const frame of parseSse(bodyStream)) {
-          const data =
-            frame.data === "" ? null : jsonOrText(frame.data);
-          for (const event of translator.translate(frame.event, data)) {
-            if (event.type === "done") {
-              finished = true;
-            }
-            send(event);
-          }
-        }
-        if (!finished) {
-          for (const event of translator.finish()) {
-            send(event);
-          }
-        }
-      } catch (error) {
+        await runAgent({
+          source,
+          message,
+          history: parsed.history,
+          abortSignal: stop.signal,
+          onEvent: send,
+        });
+      } catch (runError) {
         if (!stop.signal.aborted) {
           console.error(
-            "Relaying the agent stream failed:",
-            error instanceof Error ? error.message : String(error),
+            "Running the Ask agent failed:",
+            runError instanceof Error ? runError.message : String(runError),
           );
           send({
             type: "error",
             message:
               "The agent stopped before it answered. The map and explanations still work.",
           });
+          send({ type: "done" });
         }
       } finally {
         request.signal.removeEventListener("abort", forwardAbort);
@@ -234,94 +193,31 @@ export async function POST(request: Request): Promise<Response> {
   });
 }
 
-async function resolveThread(
-  config: AgentServerConfig,
-  threadId: string | null,
-  analysisId: string,
-  organizationId: string,
-  signal: AbortSignal,
-): Promise<string> {
-  if (threadId !== null) {
-    const thread = await readAgentThread(config, threadId, signal);
-    if (thread !== null) {
-      if (Object.keys(thread.metadata).length === 0) {
-        // A thread we didn't create. Starting a new one is safer than
-        // continuing a history with an unknown scope.
-        return createAgentThread(
-          config,
-          { analysis_id: analysisId, organization_id: organizationId },
-          signal,
-        );
-      }
-      if (
-        thread.metadata.analysis_id !== analysisId ||
-        thread.metadata.organization_id !== organizationId
-      ) {
-        throw new AgentServerError(
-          "That conversation belongs to a different analysis.",
-          403,
-        );
-      }
-      return threadId;
-    }
-  }
-
-  return createAgentThread(
-    config,
-    { analysis_id: analysisId, organization_id: organizationId },
-    signal,
-  );
-}
-
-async function selectionHint(
-  db: Supabase,
-  analysisId: string,
+function selectionHint(
+  source: AgentSource,
   selection: SelectionHint | null,
-): Promise<string | null> {
+): string | null {
   if (selection === null) {
     return null;
   }
 
   if (selection.kind === "file") {
-    const { data, error } = await db
-      .from("files")
-      .select("path")
-      .eq("analysis_id", analysisId)
-      .eq("path", selection.path)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(error.message);
-    }
-    return data ? `[Selected on the map: file ${safe(data.path)}]` : null;
+    const found = source.map.files.find((file) => file.path === selection.path);
+    return found ? `[Selected on the map: file ${safe(found.path)}]` : null;
   }
 
-  // A folder is a prefix of stored paths. Escape LIKE wildcards so folders
-  // with underscores (e.g. __tests__) work without letting callers inject
-  // wildcard patterns.
   if (selection.path === "." || selection.path.includes("\\")) {
     return null;
   }
 
-  const escaped = selection.path.replace(/[%_]/g, "\\$&");
-  const { data, error } = await db
-    .from("files")
-    .select("path")
-    .eq("analysis_id", analysisId)
-    .like("path", `${escaped}/%`)
-    .limit(1);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data.length > 0
+  const prefix = `${selection.path}/`;
+  const hasFile = source.map.files.some((file) => file.path.startsWith(prefix));
+  return hasFile
     ? `[Selected on the map: folder ${safe(selection.path)}]`
     : null;
 }
 
-function parseChatRequest(
-  value: unknown,
-): ChatRequest | string {
+function parseChatRequest(value: unknown): ChatRequest | string {
   if (!isRecord(value)) {
     return "The request is not an object.";
   }
@@ -330,17 +226,15 @@ function parseChatRequest(
     return "The analysis id is not valid.";
   }
 
-  const message = typeof value.message === "string" ? value.message.trim() : "";
+  const message =
+    typeof value.message === "string" ? value.message.trim() : "";
   if (message === "" || message.length > MAX_MESSAGE) {
     return `A question must be 1-${MAX_MESSAGE} characters.`;
   }
 
-  let threadId: string | null = null;
-  if (value.threadId !== undefined && value.threadId !== null) {
-    if (typeof value.threadId !== "string" || !UUID.test(value.threadId)) {
-      return "The conversation id is not valid.";
-    }
-    threadId = value.threadId;
+  const history = parseHistory(value.history);
+  if (typeof history === "string") {
+    return history;
   }
 
   const selection = parseSelection(value.selection);
@@ -351,9 +245,48 @@ function parseChatRequest(
   return {
     analysisId: value.analysisId,
     message,
-    threadId,
+    history,
     selection,
   };
+}
+
+function parseHistory(value: unknown): AgentHistoryMessage[] | string {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return "The conversation history must be a list.";
+  }
+  if (value.length > MAX_HISTORY_MESSAGES) {
+    return `Conversation history may contain at most ${MAX_HISTORY_MESSAGES} messages.`;
+  }
+
+  const messages: AgentHistoryMessage[] = [];
+  let totalChars = 0;
+
+  for (const entry of value) {
+    if (!isRecord(entry)) {
+      return "A conversation history message is not an object.";
+    }
+    const role = entry.role;
+    if (role !== "user" && role !== "assistant") {
+      return "A conversation history message has an invalid role.";
+    }
+    if (typeof entry.content !== "string") {
+      return "A conversation history message has invalid content.";
+    }
+    const content = entry.content.trim();
+    if (content === "" || content.length > MAX_HISTORY_MESSAGE_CHARS) {
+      return `Each conversation history message must be 1-${MAX_HISTORY_MESSAGE_CHARS} characters.`;
+    }
+    totalChars += content.length;
+    if (totalChars > MAX_HISTORY_TOTAL_CHARS) {
+      return `Conversation history exceeds ${MAX_HISTORY_TOTAL_CHARS} characters.`;
+    }
+    messages.push({ role, content });
+  }
+
+  return messages;
 }
 
 function parseSelection(
@@ -389,14 +322,6 @@ function parseSelection(
 
 function safe(path: string): string {
   return path.replace(/[\r\n]/g, " ");
-}
-
-function jsonOrText(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
 }
 
 function fail(status: number, message: string): Response {

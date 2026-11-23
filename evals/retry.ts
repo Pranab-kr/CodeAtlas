@@ -28,8 +28,23 @@ function statusOf(error: unknown): number | null {
   if (typeof error !== "object" || error === null) {
     return null;
   }
+  const statusCode = Reflect.get(error, "statusCode");
+  if (typeof statusCode === "number") {
+    return statusCode;
+  }
   const status = Reflect.get(error, "status");
-  return typeof status === "number" ? status : null;
+  if (typeof status === "number") {
+    return status;
+  }
+  const lastError = Reflect.get(error, "lastError");
+  if (lastError !== undefined) {
+    return statusOf(lastError);
+  }
+  const cause = Reflect.get(error, "cause");
+  if (cause !== undefined) {
+    return statusOf(cause);
+  }
+  return null;
 }
 
 function wait(ms: number): Promise<void> {

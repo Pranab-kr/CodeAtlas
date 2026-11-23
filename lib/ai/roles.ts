@@ -2,8 +2,7 @@ import { traceable } from "langsmith/traceable";
 
 import { env } from "@/lib/env";
 
-import { aiClient, aiModel } from "./client";
-import { messageText } from "./message";
+import { aiGenerateText, aiModel } from "./client";
 
 export const CLASSIFY_ROLES_PROMPT_VERSION = "classify-roles-v1";
 
@@ -105,30 +104,19 @@ export const classifyRoles = traceable(
 async function classifyBatch(
   batch: readonly RoleCandidate[],
 ): Promise<Map<string, AiRole>> {
-  const completion = await aiClient().chat.completions.create(
-    {
+  const result = await aiGenerateText({
+    system: SYSTEM,
+    prompt: batchPrompt(batch),
+    temperature: 0,
+    maxOutputTokens: 3_000,
+    metadata: {
+      prompt_version: CLASSIFY_ROLES_PROMPT_VERSION,
       model: aiModel(),
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: batchPrompt(batch) },
-      ],
-      temperature: 0,
-      max_tokens: 3_000,
-      response_format: { type: "json_object" },
+      files: batch.length,
     },
-    {
-      langsmithExtra: {
-        metadata: {
-          prompt_version: CLASSIFY_ROLES_PROMPT_VERSION,
-          model: aiModel(),
-          files: batch.length,
-        },
-      },
-    },
-  );
+  });
 
-  const text = messageText(completion.choices[0]?.message.content ?? null);
-  return parseRoles(text, batch);
+  return parseRoles(result.text, batch);
 }
 
 function batchPrompt(batch: readonly RoleCandidate[]): string {

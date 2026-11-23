@@ -78,9 +78,14 @@ interface Turn {
   error: string | null;
 }
 
+interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface AskPanelProps {
   analysisId: string;
-  agentConfigured: boolean;
+  aiConfigured: boolean;
   context: AskContext | null;
   files: readonly ParsedFile[];
   folderIds: ReadonlyMap<string, string>;
@@ -88,6 +93,10 @@ interface AskPanelProps {
   onRevealFolder(id: string): void;
   onHover(selection: Selection): void;
 }
+
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_HISTORY_MESSAGE_CHARS = 4_000;
+const MAX_HISTORY_TOTAL_CHARS = 40_000;
 
 const EXAMPLES = [
   "Where is authentication handled?",
@@ -103,7 +112,7 @@ const EXAMPLES = [
  */
 export function AskPanel({
   analysisId,
-  agentConfigured,
+  aiConfigured,
   context,
   files,
   folderIds,
@@ -112,7 +121,6 @@ export function AskPanel({
   onHover,
 }: AskPanelProps) {
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [threadId, setThreadId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const turnId = useRef(0);
@@ -138,7 +146,7 @@ export function AskPanel({
       if (
         text === "" ||
         busy ||
-        !agentConfigured ||
+        !aiConfigured ||
         sending.current
       ) {
         return;
@@ -148,6 +156,7 @@ export function AskPanel({
       turnId.current += 1;
       const id = `turn-${turnId.current}`;
       const selection = context;
+      const history = buildHistory(turns);
 
       setDraft("");
       setBusy(true);
@@ -170,8 +179,8 @@ export function AskPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             analysisId,
-            threadId,
             message: text,
+            history,
             selection,
           }),
         });
@@ -208,9 +217,7 @@ export function AskPanel({
             continue;
           }
 
-          if (event.type === "thread") {
-            setThreadId(event.threadId);
-          } else if (event.type === "text") {
+          if (event.type === "text") {
             update(id, (turn) => ({
               ...turn,
               answer: turn.answer + event.text,
@@ -306,7 +313,7 @@ export function AskPanel({
         setBusy(false);
       }
     },
-    [agentConfigured, analysisId, busy, context, threadId, update],
+    [aiConfigured, analysisId, busy, context, turns, update],
   );
 
   const reset = useCallback(() => {
@@ -314,11 +321,10 @@ export function AskPanel({
       return;
     }
     setTurns([]);
-    setThreadId(null);
     setDraft("");
   }, [busy]);
 
-  if (!agentConfigured) {
+  if (!aiConfigured) {
     const isDev = process.env.NODE_ENV !== "production";
     return (
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-surface">
@@ -332,14 +338,14 @@ export function AskPanel({
               {isDev ? (
                 <>
                   Set{" "}
-                  <span className="font-mono text-foreground">AGENT_URL</span>{" "}
+                  <span className="font-mono text-foreground">AI_BASE_URL</span>
+                  ,{" "}
+                  <span className="font-mono text-foreground">AI_API_KEY</span>{" "}
                   and{" "}
-                  <span className="font-mono text-foreground">
-                    AGENT_ASSISTANT_ID
-                  </span>{" "}
+                  <span className="font-mono text-foreground">AI_MODEL</span>{" "}
                   in{" "}
                   <span className="font-mono text-foreground">.env.local</span>,
-                  start the agent service, and reload.
+                  then reload.
                 </>
               ) : (
                 "The repository assistant is not enabled on this deployment."
@@ -348,7 +354,7 @@ export function AskPanel({
           </EmptyHeader>
           <EmptyContent>
             <p className="text-[11.5px] text-muted-foreground">
-              The map, blast radius and explanations work without it.
+              The map, routes and blast radius work without it.
             </p>
           </EmptyContent>
         </Empty>
@@ -722,6 +728,44 @@ async function errorOf(response: Response): Promise<string> {
     // Fall through to the status.
   }
   return `The agent returned ${response.status}.`;
+}
+
+function buildHistory(turns: readonly Turn[]): HistoryMessage[] {
+  const messages: HistoryMessage[] = [];
+  for (const turn of turns) {
+    if (turn.status !== "done") {
+      continue;
+    }
+    const answer = turn.answer.trim();
+    if (answer === "") {
+      continue;
+    }
+    const question =
+      turn.context === null
+        ? turn.question
+        : `${turn.question}\n\n[Selected on the map: ${turn.context.kind} ${turn.context.path}]`;
+    messages.push(
+      {
+        role: "user",
+        content: question.trim().slice(0, MAX_HISTORY_MESSAGE_CHARS),
+      },
+      {
+        role: "assistant",
+        content: answer.slice(0, MAX_HISTORY_MESSAGE_CHARS),
+      },
+    );
+  }
+
+  const trimmed = messages.slice(-MAX_HISTORY_MESSAGES);
+  let total = trimmed.reduce((sum, entry) => sum + entry.content.length, 0);
+  while (trimmed.length >= 2 && total > MAX_HISTORY_TOTAL_CHARS) {
+    const removedUser = trimmed.shift();
+    const removedAssistant = trimmed.shift();
+    total -=
+      (removedUser?.content.length ?? 0) +
+      (removedAssistant?.content.length ?? 0);
+  }
+  return trimmed;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

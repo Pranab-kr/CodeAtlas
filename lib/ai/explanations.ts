@@ -6,14 +6,13 @@ import { createPipelineSupabaseClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { Repository } from "@/lib/pipeline/github";
 
-import { aiClient, aiModel } from "./client";
+import { aiGenerateText, aiModel } from "./client";
 import type { FileContext, FolderContext } from "./context";
 import {
   fileAllowedPaths,
   folderAllowedPaths,
   inventedPaths,
 } from "./invented-paths";
-import { messageText } from "./message";
 import {
   buildFilePrompt,
   buildFolderPrompt,
@@ -150,35 +149,22 @@ async function generateFile(
   source: string,
   model: string,
 ): Promise<string> {
-  const completion = await aiClient().chat.completions.create(
-    {
+  const result = await aiGenerateText({
+    system: fileSystemPrompt(),
+    prompt: buildFilePrompt({ ...file, source }),
+    temperature: 0.2,
+    maxOutputTokens: 1_200,
+    metadata: {
+      prompt_version: EXPLAIN_FILE_PROMPT_VERSION,
       model,
-      messages: [
-        { role: "system", content: fileSystemPrompt() },
-        {
-          role: "user",
-          content: buildFilePrompt({ ...file, source }),
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 1_200,
+      path: file.path,
     },
-    {
-      langsmithExtra: {
-        metadata: {
-          prompt_version: EXPLAIN_FILE_PROMPT_VERSION,
-          model,
-          path: file.path,
-        },
-      },
-    },
-  );
+  });
 
-  const choice = completion.choices[0];
   return requireText(
-    choice?.message.content ?? null,
-    choice?.finish_reason,
-    choice?.message,
+    result.text,
+    result.finishReason,
+    result.finalStep.reasoningText,
   );
 }
 
@@ -186,60 +172,43 @@ async function generateFolder(
   folder: FolderContext,
   model: string,
 ): Promise<string> {
-  const completion = await aiClient().chat.completions.create(
-    {
+  const result = await aiGenerateText({
+    system: folderSystemPrompt(),
+    prompt: buildFolderPrompt(folder),
+    temperature: 0.2,
+    maxOutputTokens: 900,
+    metadata: {
+      prompt_version: EXPLAIN_FOLDER_PROMPT_VERSION,
       model,
-      messages: [
-        { role: "system", content: folderSystemPrompt() },
-        { role: "user", content: buildFolderPrompt(folder) },
-      ],
-      temperature: 0.2,
-      max_tokens: 900,
+      folder: folder.id,
     },
-    {
-      langsmithExtra: {
-        metadata: {
-          prompt_version: EXPLAIN_FOLDER_PROMPT_VERSION,
-          model,
-          folder: folder.id,
-        },
-      },
-    },
-  );
+  });
 
-  const choice = completion.choices[0];
   return requireText(
-    choice?.message.content ?? null,
-    choice?.finish_reason,
-    choice?.message,
+    result.text,
+    result.finishReason,
+    result.finalStep.reasoningText,
   );
 }
 
 function requireText(
-  content: Parameters<typeof messageText>[0],
+  content: string,
   finishReason: string | null | undefined,
-  message: unknown,
+  reasoningText: string | undefined,
 ): string {
-  const text = messageText(content).trim();
+  const text = content.trim();
   if (text !== "") {
     return text;
   }
 
-  const reasoning = hasReasoning(message);
+  const reasoning =
+    typeof reasoningText === "string" && reasoningText.trim() !== "";
   throw new Error(
     `The model returned an empty explanation (finish reason: ${finishReason ?? "unknown"}).` +
       (reasoning
         ? " It returned reasoning but no final text; use a model that returns content."
         : " Use a model that returns a text completion."),
   );
-}
-
-function hasReasoning(message: unknown): boolean {
-  if (typeof message !== "object" || message === null) {
-    return false;
-  }
-  const reasoning = Reflect.get(message, "reasoning");
-  return typeof reasoning === "string" && reasoning.trim() !== "";
 }
 
 async function readFileCache(

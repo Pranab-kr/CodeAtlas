@@ -2,8 +2,7 @@ import { Client } from "langsmith";
 import { evaluate, type EvaluationResult } from "langsmith/evaluation";
 import type { Dataset, Example, Run } from "langsmith/schemas";
 
-import { aiClient, aiModel } from "../../lib/ai/client.ts";
-import { messageText } from "../../lib/ai/message.ts";
+import { aiGenerateText, aiModel } from "../../lib/ai/client.ts";
 import {
   buildFilePrompt,
   EXPLAIN_FILE_PROMPT_VERSION,
@@ -490,23 +489,19 @@ async function retiredPromptTarget(inputs: unknown): Promise<{ body: string }> {
 }
 
 async function generate(system: string, user: string): Promise<string> {
-  const completion = await withRetry(() =>
-    aiClient().chat.completions.create({
-      model: aiModel(),
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
+  const result = await withRetry(() =>
+    aiGenerateText({
+      system,
+      prompt: user,
       temperature: 0.2,
-      max_tokens: 1_200,
+      maxOutputTokens: 1_200,
     }),
   );
 
-  const choice = completion.choices[0];
-  const text = messageText(choice?.message.content ?? null).trim();
+  const text = result.text.trim();
   if (text === "") {
     throw new Error(
-      `The model returned an empty explanation (finish reason: ${choice?.finish_reason ?? "unknown"}).`,
+      `The model returned an empty explanation (finish reason: ${result.finishReason ?? "unknown"}).`,
     );
   }
   return text;

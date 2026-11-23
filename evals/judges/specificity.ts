@@ -1,5 +1,4 @@
-import { aiClient, aiModel } from "@/lib/ai/client";
-import { messageText } from "@/lib/ai/message";
+import { aiGenerateText } from "@/lib/ai/client";
 
 import { withRetry } from "../retry";
 
@@ -23,33 +22,26 @@ Judge specificity and usefulness, not writing style, length or confidence. Do no
 /**
  * The prompt-version comparison needs a model as judge, because "is this
  * specific enough to be useful" has no exact answer. The score is therefore a
- * relative signal, not ground truth. Every call goes through the wrapped
- * client, so the judgement is traced like any other model call.
+ * relative signal, not ground truth. Every call goes through the unified
+ * AI SDK client, so the judgement is traced like any other model call.
  */
 export async function judgeSpecificity(input: {
   path: string;
   body: string;
 }): Promise<SpecificityJudgement> {
-  const completion = await withRetry(() =>
-    aiClient().chat.completions.create({
-      model: aiModel(),
-      messages: [
-        { role: "system", content: SYSTEM },
-        {
-          role: "user",
-          content: `File: ${input.path}\n\nExplanation:\n${input.body}`,
-        },
-      ],
+  const result = await withRetry(() =>
+    aiGenerateText({
+      system: SYSTEM,
+      prompt: `File: ${input.path}\n\nExplanation:\n${input.body}`,
       temperature: 0,
-      max_tokens: 1_200,
-      response_format: { type: "json_object" },
+      maxOutputTokens: 1_200,
     }),
   );
 
-  const text = messageText(completion.choices[0]?.message.content ?? null).trim();
+  const text = result.text.trim();
   if (text === "") {
     throw new Error(
-      `The judge returned no text (finish reason: ${completion.choices[0]?.finish_reason ?? "unknown"}).`,
+      `The judge returned no text (finish reason: ${result.finishReason ?? "unknown"}).`,
     );
   }
 

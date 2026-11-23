@@ -88,7 +88,6 @@ interface DetailPaneProps {
   /** Ask is a mode of the whole pane, not a third tab. */
   askOpen: boolean;
   onAsk(open: boolean): void;
-  agentConfigured: boolean;
   explanations: ReadonlyMap<string, ExplanationState>;
   onExplain(target: ExplanationTarget): void;
   onCheckStale(target: ExplanationTarget): void;
@@ -124,7 +123,6 @@ export function DetailPane({
   tracingConfigured,
   askOpen,
   onAsk,
-  agentConfigured,
   explanations,
   onExplain,
   onCheckStale,
@@ -368,7 +366,7 @@ export function DetailPane({
       >
         <AskPanel
           analysisId={analysisId}
-          agentConfigured={agentConfigured}
+          aiConfigured={aiConfigured}
           context={askContext}
           files={files}
           folderIds={folderIds}

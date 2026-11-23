@@ -9,16 +9,10 @@ const PUBLIC_PATHS = [env.clerkSignInUrl, env.clerkSignUpUrl];
 const HOME_PATH = "/";
 const START_PATH = "/start";
 const DASHBOARD_PATH = "/dashboard";
-// The agent's tools have no Clerk session. The route checks the database-
-// signed credential instead, and that credential names one analysis.
-const AGENT_TOOLS_PATH = "/api/agent/tools";
 
 function isPublic(pathname: string): boolean {
-  return (
-    pathname === AGENT_TOOLS_PATH ||
-    PUBLIC_PATHS.some(
-      (path) => pathname === path || pathname.startsWith(`${path}/`),
-    )
+  return PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
 }
 

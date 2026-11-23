@@ -1,10 +1,10 @@
-import { parseSse } from "../../lib/agent/sse.ts";
-import { AgentStreamTranslator } from "../../lib/agent/stream.ts";
+import { readAgentSource } from "../../lib/agent/read.ts";
+import { runAgent } from "../../lib/agent/run.ts";
 import { AGENT_TOOL_NAMES } from "../../lib/agent/tools.ts";
+import { aiModel } from "../../lib/ai/client.ts";
+import { env } from "../../lib/env.ts";
 import { evalDb, messageOf } from "./shared.mts";
 
-const DEFAULT_AGENT_URL = "http://127.0.0.1:2024";
-const DEFAULT_ASSISTANT_ID = "code-atlas-agent";
 const DEFAULT_TIMEOUT_SECONDS = 240;
 
 interface Options {
@@ -43,9 +43,7 @@ const PLUMBING: readonly RegExp[] = [
   /\b(?:as an ai|language model)\b/i,
   /\b(?:I can't|I cannot|I don't|I do not) (?:access|see|browse|read)\b/i,
   ...AGENT_TOOL_NAMES.filter(
-    (name) =>
-      name !== "routes" &&
-      name !== "walk",
+    (name) => name !== "routes" && name !== "walk",
   ).map((name) => new RegExp(`\\b${name}\\b`, "i")),
 ];
 
@@ -128,14 +126,11 @@ function parseOptions(argv: readonly string[]): Options {
 
 const USAGE = `Usage: pnpm eval:agent [options]
 
-Runs a small set of real questions against the local agent server and scores
+Runs a small set of real questions through the in-process Ask agent and scores
 two things deterministically:
 
   looked up   the answer had at least one successful Atlas lookup behind it
   plumbing    the answer did not mention tools, credentials or its own setup
-
-The Next app and the agent service must both be running. The agent's .env
-must point ATLAS_TOOLS_URL at the app.
 
 Options:
   --analysis <uuid>  Ask about this succeeded analysis (default: newest with files)
@@ -150,12 +145,11 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  const agentUrl = (process.env.AGENT_URL?.trim() || DEFAULT_AGENT_URL).replace(
-    /\/+$/,
-    "",
-  );
-  const assistantId =
-    process.env.AGENT_ASSISTANT_ID?.trim() || DEFAULT_ASSISTANT_ID;
+  if (!env.aiConfigured) {
+    throw new Error(
+      "AI is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL in .env.local.",
+    );
+  }
 
   const db = evalDb();
   const analysisId = options.analysis ?? (await newestAnalysis(db));
@@ -176,6 +170,8 @@ async function main(): Promise<number> {
     );
   }
 
+  const source = await readAgentSource(credential);
+
   const cases =
     options.cases === null
       ? CASES
@@ -184,22 +180,15 @@ async function main(): Promise<number> {
     throw new Error("No case matched --case.");
   }
 
-  console.log(`Agent:    ${agentUrl} (${assistantId})`);
-  console.log(`Analysis: ${analysisId}`);
+  console.log(`Model:    ${aiModel()}`);
+  console.log(`Analysis: ${analysisId} (${source.analysis.projectName})`);
   console.log(`Cases:    ${cases.length}\n`);
 
   const outcomes: Outcome[] = [];
   for (const testCase of cases) {
     process.stdout.write(`${testCase.id.padEnd(10)} `);
     try {
-      const outcome = await runCase(
-        agentUrl,
-        assistantId,
-        analysisId,
-        credential,
-        testCase,
-        options.timeoutMs,
-      );
+      const outcome = await runCase(source, testCase, options.timeoutMs);
       outcomes.push(outcome);
       console.log("done");
     } catch (error) {
@@ -299,64 +288,10 @@ async function newestAnalysis(
 }
 
 async function runCase(
-  agentUrl: string,
-  assistantId: string,
-  analysisId: string,
-  credential: string,
+  source: Awaited<ReturnType<typeof readAgentSource>>,
   testCase: Case,
   timeoutMs: number,
 ): Promise<Outcome> {
-  const headers = agentHeaders();
-  const created = await fetch(`${agentUrl}/threads`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      metadata: { analysis_id: analysisId, purpose: "eval" },
-    }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-
-  if (!created.ok) {
-    throw new Error(
-      `Creating a thread failed (${created.status}): ${(await created.text()).slice(0, 300)}`,
-    );
-  }
-
-  const thread: unknown = await created.json();
-  if (
-    typeof thread !== "object" ||
-    thread === null ||
-    !("thread_id" in thread) ||
-    typeof thread.thread_id !== "string"
-  ) {
-    throw new Error("The agent returned no thread id.");
-  }
-
-  const response = await fetch(
-    `${agentUrl}/threads/${thread.thread_id}/runs/stream`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        assistant_id: assistantId,
-        input: { messages: [{ role: "user", content: testCase.question }] },
-        context: { credential },
-        stream_mode: "updates",
-      }),
-      signal: AbortSignal.timeout(timeoutMs),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `The run failed (${response.status}): ${(await response.text()).slice(0, 300)}`,
-    );
-  }
-  if (response.body === null) {
-    throw new Error("The run returned no stream.");
-  }
-
-  const translator = new AgentStreamTranslator();
   const tools = new Map<
     string,
     { name: string; status: "running" | "success" | "error" }
@@ -364,19 +299,11 @@ async function runCase(
   let text = "";
   let error: string | null = null;
 
-  for await (const frame of parseSse(response.body)) {
-    if (frame.data === "") {
-      continue;
-    }
-
-    let data: unknown;
-    try {
-      data = JSON.parse(frame.data);
-    } catch {
-      data = frame.data;
-    }
-
-    for (const event of translator.translate(frame.event, data)) {
+  await runAgent({
+    source,
+    message: testCase.question,
+    abortSignal: AbortSignal.timeout(timeoutMs),
+    onEvent: (event) => {
       if (event.type === "tool_start") {
         tools.set(event.id, { name: event.name, status: "running" });
       } else if (event.type === "tool_end") {
@@ -390,14 +317,8 @@ async function runCase(
       } else if (event.type === "error") {
         error = event.message;
       }
-    }
-  }
-
-  for (const event of translator.finish()) {
-    if (event.type === "text") {
-      text += event.text;
-    }
-  }
+    },
+  });
 
   return {
     case: testCase,
@@ -405,17 +326,6 @@ async function runCase(
     text,
     error,
   };
-}
-
-function agentHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const apiKey = process.env.AGENT_API_KEY?.trim();
-  if (apiKey) {
-    headers["x-api-key"] = apiKey;
-  }
-  return headers;
 }
 
 // A one-line shape of the answer, so the terminal table stays readable.

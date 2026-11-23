@@ -58,7 +58,6 @@ export function AnalysisView({
   analysisId,
   aiConfigured,
   tracingConfigured,
-  agentConfigured,
   repository,
   coverage,
   files,
@@ -69,7 +68,6 @@ export function AnalysisView({
   analysisId: string;
   aiConfigured: boolean;
   tracingConfigured: boolean;
-  agentConfigured: boolean;
   repository: RepositoryFacts;
   coverage: Coverage | null;
   files: readonly ParsedFile[];
@@ -435,7 +433,6 @@ export function AnalysisView({
           tracingConfigured={tracingConfigured}
           askOpen={askOpen}
           onAsk={setAskOpen}
-          agentConfigured={agentConfigured}
           explanations={explanations}
           onExplain={explain}
           onCheckStale={checkStale}
